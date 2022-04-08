@@ -1,0 +1,5 @@
+docs/build/*
+build/*
+dist/*
+sapling_py.egg-info/*
+env/*
