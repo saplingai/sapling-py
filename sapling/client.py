@@ -53,7 +53,7 @@ class SaplingClient:
             - `gb-variety`: British English
             - `au-variety`: Australian English
             - `ca-variety`: Canadian English
-            - `null-variety`: Do't suggest changes based on English variety
+            - `null-variety`: Don't suggest changes based on English variety
 
         '''
 
@@ -88,7 +88,7 @@ class SaplingClient:
         Use this API endpoint to have Sapling adapt its system over time.
 
         Each suggested edit has an edit UUID. You can pass this information back to Sapling to
-        indicate the edit suggestion was good.
+        indicate the edit suggestion was helpful.
         For each unique edit in each document, use the accept or reject API endpoint only once in total.
 
         :param edit_uuid: Opaque UUID of the edit returned from the edits endpoint
