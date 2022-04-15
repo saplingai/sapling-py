@@ -40,14 +40,14 @@ edits = client.edits('Lets get started!', session_id='test_session')
 
 ```json
 [{
-  'id': 'aa5ee291-a073-5146-8ebc-c9c899d01278',
-  'sentence': 'Lets get started!',
-  'sentence_start': 0,
-  'start': 0
-  'end': 4,
-  'replacement': "Let's",
-  'error_type': 'R:OTHER',
-  'general_error_type': 'Other',
+  "id": "aa5ee291-a073-5146-8ebc-c9c899d01278",
+  "sentence": "Lets get started!",
+  "sentence_start": 0,
+  "start": 0
+  "end": 4,
+  "replacement": "Let's",
+  "error_type": "R:OTHER",
+  "general_error_type": "Other",
 }]
 ```
 
