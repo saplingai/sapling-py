@@ -1,15 +1,15 @@
-Sapling documentation
+Sapling for Python
 ===================================
 
-**Sapling** is a Python client to interface with Sapling AI Writing Assistant HTTP APIs.
+**Sapling** is a Python client to interface with [Sapling.ai](https://sapling.ai) HTTP APIs.
 
 
-Check out the {doc}`usage` section for further information, including
-how to {ref}`installation` the project.
+Refer to the the {doc}`usage` section for further information, including
+{ref}`installation` instructions.
 
 
 ```{note}
-This project is under active development. Please email support@sapling.ai for questions, feedback or support.
+This project is under active development. Please email support@sapling.ai with any questions or feedback.
 ```
 
 

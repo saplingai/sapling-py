@@ -3,15 +3,15 @@ import uuid
 
 class SaplingClient:
     '''
-    Sapling client. Provides a straightforward mapping from Python to Sapling HTTP REST APIs.
+    Sapling client class. Provides a mapping of Python functions to Sapling HTTP REST APIs.
 
     :param api_key: 32-character API key
     :type api_key: str
-    :param timeout: Timeout for API call in seconds. Defaults for 120 seconds.
+    :param timeout: Timeout for API call in seconds. Defaults to 120 seconds.
     :type timeout: int
-    :param hostname: Hostname override for on-premise deployments.
+    :param hostname: Hostname override for SDK and self-hosted deployments.
     :type hostname: str
-    :param pathname: Pathname override for on-premise deployments or specific version requirements.
+    :param pathname: Pathname override for SDK and self-hosted deployments as well as version requirements.
     :type pathname: str
     '''
 
@@ -36,23 +36,24 @@ class SaplingClient:
         auto_apply=False,
     ):
         '''
-        Fetches grammar edits for a piece of text.
+        Fetches edits (including for grammar and spelling) for provided text.
 
         :param text: Text to process for edits.
         :type text: str
-        :param session_id: Unique name or UUID of article or portion of text that is being checked
+        :param session_id: Unique name or UUID of document or portion of text that is being checked
         :type session_id: str
-        :param variety: Specifies regional English spelling options. Defaults to the configuration in the Sapling Dashboard.
+        :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
         :type variety: str
-        :param auto_apply:
+        :param auto_apply: Whether to return a field with edits applied to the text
         :type auto_apply: bool
         :rtype: list[dict]
-        Supported regions
+
+        Supported varietys:
             - `us-variety`: American English
             - `gb-variety`: British English
             - `au-variety`: Australian English
             - `ca-variety`: Canadian English
-            - `null-variety`: Don’t suggest any changes based on English variety
+            - `null-variety`: Do't suggest changes based on English variety
 
         '''
 
@@ -84,14 +85,15 @@ class SaplingClient:
         session_id=None,
     ):
         '''
-        This API endpoint is a signal that Sapling uses to improve it’s edits over time.
-        Each suggested edit has an edit_id edit_UUID. You can pass this information back to Sapling to
-        indicate the edit suggestion was good. For each unique edit in each document, try to hit
-        the accept or reject API endpoints only one time in total.
+        Use this API endpoint to have Sapling adapt its system over time.
+
+        Each suggested edit has an edit UUID. You can pass this information back to Sapling to
+        indicate the edit suggestion was good.
+        For each unique edit in each document, use the accept or reject API endpoint only once in total.
 
         :param edit_uuid: Opaque UUID of the edit returned from the edits endpoint
         :type edit_uuid: str, uuid
-        :param session_id: Unique name or UUID of article or portion of text that is being checked
+        :param session_id: Unique name or UUID of text that is being processed
         :type session_id: str
         '''
         url = f'{self.url_endpoint}edits/{edit_uuid}/accept'
@@ -115,14 +117,15 @@ class SaplingClient:
         session_id=None,
     ):
         '''
-        This API endpoint is a signal that Sapling uses to improve it’s edits over time.
-        Each suggested edit has an edit_id UUID. You can pass this information back to Sapling to
-        indicate the edit suggestion was good. For each unique edit in each document, try to hit
-        the accept or reject API endpoints only one time in total.
+        Use this API endpoint to have Sapling not recommend the same edit anymore.
+
+        Each suggested edit has an edit UUID. You can pass this information back to Sapling to
+        indicate the edit suggestion was not helpful.
+        For each unique edit in each document, use the accept or reject API endpoint only once in total.
 
         :param edit_uuid: Opaque UUID of the edit returned from the edits endpoint
         :type edit_uuid: str, uuid
-        :param session_id: Unique name or UUID of article or portion of text that is being checked
+        :param session_id: Unique name or UUID of text that is being processed
         :type session_id: str
         '''
         url = f'{self.url_endpoint}edits/{edit_uuid}/reject'
