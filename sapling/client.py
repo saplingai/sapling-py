@@ -48,7 +48,7 @@ class SaplingClient:
         :type auto_apply: bool
         :rtype: list[dict]
 
-        Supported varietys:
+        Supported varieties:
             - `us-variety`: American English
             - `gb-variety`: British English
             - `au-variety`: Australian English
