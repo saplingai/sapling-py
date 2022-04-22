@@ -5,6 +5,19 @@ Python wrapper for the [Sapling.ai API](https://sapling.ai/api).
 Here's a [grammar check demo](https://sapling.ai/grammar-check).
 
 
+Sapling Features:
+--------
+
+Sapling is an AI Writing Assistant offering spelling and grammar checker capabilities. Compare against grammar checking tools and APIs like Grammarly (Grammerly), LanguageTool, ProWritingAid and Ginger.
+
+- **60% more grammar corrections**: compared to [other systems](https://sapling.ai/comparison/api) at similar accuracy using state-of-the-art machine learning systems for natural language processing.
+- **Low Latency**: Achieve the same real-time performance that users of Sapling's own interface experience.
+- **Over 20 error types**: Error categories such as preposition, noun form, and verb tense, including both high-level and fine-grained error information.
+- **Custom Models**: Get corrections and edits tuned to the domain of your text—for example academic writing vs. subtitles.
+- **Enterprise Security**: Ask us about our no data rention policies, [self-hosted/on-premise](https://sapling.ai/onprem) deployment options, and other [cybersecurity policies and procedures](https://sapling.ai/security).
+- **Rich Text Editor Support**: TinyMCE, CKEditor, QuillJS, Trix, ProseMirror, WordPress, Draft.js, Froala, Lexical and others. Consider using [Sapling's JavaScript SDK](https://sapling.ai/docs/sdk/JavaScript/quickstart) for webpages.
+
+
 Installation
 --------
 
