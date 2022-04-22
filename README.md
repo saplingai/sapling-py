@@ -2,14 +2,16 @@
 
 Python wrapper for the [Sapling.ai API](https://sapling.ai/api).
 
-Here's a [grammar check demo](https://sapling.ai/grammar-check).
-
+Try out a [grammar check demo](https://sapling.ai/grammar-check).
+Compare against grammar checking tools and APIs like Grammarly (Grammerly), LanguageTool, ProWritingAid and Ginger.
 
 Sapling Features:
 --------
 
-Sapling is an AI Writing Assistant offering spelling and grammar checker capabilities. Compare against grammar checking tools and APIs like Grammarly (Grammerly), LanguageTool, ProWritingAid and Ginger.
+Sapling is an AI messaging assistant.
+The API offers spelling and grammar checking endpoints.
 
+Benefits include:
 - **60% more grammar corrections**: compared to [other systems](https://sapling.ai/comparison/api) at similar accuracy using state-of-the-art machine learning systems for natural language processing.
 - **Low Latency**: Achieve the same real-time performance that users of Sapling's own interface experience.
 - **Over 20 error types**: Error categories such as preposition, noun form, and verb tense, including both high-level and fine-grained error information.
@@ -51,7 +53,7 @@ client = SaplingClient(api_key=API_KEY)
 edits = client.edits('Lets get started!', session_id='test_session')
 ```
 
-- The result should be an array of edits of this form:
+The result should be an array of edits of this form:
 
 ```json
 [{
@@ -66,8 +68,9 @@ edits = client.edits('Lets get started!', session_id='test_session')
 }]
 ```
 
-- More information on [request options and response structure](https://sapling.ai/docs/api/edits-overview).
-- Get a production key by following [this documentation](https://sapling.ai/docs/api/api-access).
+Get a production key by following [this documentation](https://sapling.ai/docs/api/api-access).
+
+Here's some more information on [request options and response structure](https://sapling.ai/docs/api/edits-overview).
 
 License
 -------
