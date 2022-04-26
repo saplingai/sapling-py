@@ -5,19 +5,19 @@ Python wrapper for the [Sapling.ai API](https://sapling.ai/api).
 Try out a [grammar check demo](https://sapling.ai/grammar-check).
 Compare against grammar checking tools and APIs like Grammarly (Grammerly), LanguageTool, ProWritingAid and Ginger.
 
-Sapling Features:
+Functionality
 --------
 
 Sapling is an AI messaging assistant.
-The API offers spelling and grammar checking endpoints.
+The API currently offers spelling and grammar checking endpoints.
 
 Benefits include:
 - **60% more grammar corrections**: compared to [other systems](https://sapling.ai/comparison/api) at similar accuracy using state-of-the-art machine learning systems for natural language processing.
 - **Low Latency**: Achieve the same real-time performance that users of Sapling's own interface experience.
 - **Over 20 error types**: Error categories such as preposition, noun form, and verb tense, including both high-level and fine-grained error information.
 - **Custom Models**: Get corrections and edits tuned to the domain of your text—for example academic writing vs. subtitles.
-- **Enterprise Security**: Ask us about our no data rention policies, [self-hosted/on-premise](https://sapling.ai/onprem) deployment options, and other [cybersecurity policies and procedures](https://sapling.ai/security).
-- **Rich Text Editor Support**: TinyMCE, CKEditor, QuillJS, Trix, ProseMirror, WordPress, Draft.js, Froala, Lexical and others. Consider using [Sapling's JavaScript SDK](https://sapling.ai/docs/sdk/JavaScript/quickstart) for webpages.
+- **Enterprise Security**: Ask us about our no data retention policies, [self-hosted/on-premises](https://sapling.ai/onprem) deployment options, and other [cybersecurity policies and procedures](https://sapling.ai/security).
+- **Rich Text Editor Support**: TinyMCE, CKEditor, QuillJS, Trix, ProseMirror, WordPress, Draft.js, Froala, Lexical and others. Consider using [Sapling's JavaScript SDK](https://sapling.ai/docs/sdk/JavaScript/quickstart) for displaying the API's outputs on webpage editors.
 
 
 Installation
@@ -35,7 +35,7 @@ Documentation
 -------------
 
 Documentation for the client is available at [Read the Docs](https://sapling.readthedocs.io/) and
-documentation for the HTTP API is available on [Sapling.ai](https://sapling.ai/docs).
+documentation for the HTTP API is available at [Sapling.ai](https://sapling.ai/docs).
 
 
 Quickstart
