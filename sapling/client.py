@@ -33,7 +33,9 @@ class SaplingClient:
         self,
         text,
         session_id=None,
+        lang=None,
         variety=None,
+        medical=None,
         auto_apply=False,
     ):
         '''
@@ -43,11 +45,31 @@ class SaplingClient:
         :type text: str
         :param session_id: Unique name or UUID of document or portion of text that is being checked
         :type session_id: str
+        :param session_id: 2 letter ISO 639-1 language code
+        :type session_id: str
         :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
         :type variety: str
+        :param medical: If true, the backend will apply Sapling's medical dictionary.
+        :type medical: bool
         :param auto_apply: Whether to return a field with edits applied to the text
         :type auto_apply: bool
         :rtype: list[dict]
+
+        Supported languages:
+            - `de`:  German (Deutsch)
+            - `el`:  Greek (Ελληνικά)
+            - `en`:  English (US/UK/CA/AU)
+            - `es`:  Spanish (Español)
+            - `fr`:  French  (Français) (`fr-fr` and `fr-ca` coming soon)
+            - `it`:  Italian (Italiano)
+            - `jp`:  Japanese (日本語)
+            - `ko`:  Korean (한국어)
+            - `nl`:  Dutch (Nederlands)
+            - `pl`:  Polish (Polski)
+            - `pt`:  Portuguese (Português) (`pt-pt` and `pt-br` coming soon)
+            - `sv`:  Swedish (Svenska)
+            - `tl`:  Tagalog
+            - `zh`:  Chinese (中文)
 
         Supported varieties:
             - `us-variety`: American English
@@ -65,8 +87,12 @@ class SaplingClient:
             'text': text,
             'session_id': session_id,
         }
+        if lang is not None:
+            data['lang'] = lang
         if variety is not None:
             data['variety'] = variety
+        if medical is not None:
+            data['medical'] = medical
         if auto_apply is not None:
             data['auto_apply'] = auto_apply
 
