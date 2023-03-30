@@ -27,6 +27,7 @@ class SaplingClient:
         self.hostname = hostname or 'https://api.sapling.ai'
         self.pathname = pathname or '/api/v1/'
         self.url_endpoint = self.hostname + self.pathname
+        self.default_session_id = str(uuid.uuid4())
 
     def edits(
         self,
@@ -58,7 +59,7 @@ class SaplingClient:
         '''
 
         url = self.url_endpoint + 'edits'
-        session_id = session_id or str(uuid.uuid4())
+        session_id = session_id or self.default_session_id
         data = {
             'key': self.api_key,
             'text': text,
@@ -79,7 +80,7 @@ class SaplingClient:
             return resp_json.get('edits')
         raise Exception(f'HTTP {resp.status_code}: {resp.text}')
 
-    def accept(
+    def accept_edit(
         self,
         edit_uuid,
         session_id=None,
@@ -97,7 +98,7 @@ class SaplingClient:
         :type session_id: str
         '''
         url = f'{self.url_endpoint}edits/{edit_uuid}/accept'
-        session_id = session_id or uuid.uuid4()
+        session_id = session_id or self.default_session_id
         data = {
             'key': self.api_key,
             'session_id': session_id,
@@ -111,7 +112,7 @@ class SaplingClient:
             return
         raise Exception(f'HTTP {resp.status_code}: resp.text')
 
-    def reject(
+    def reject_edit(
         self,
         edit_uuid,
         session_id=None,
@@ -129,10 +130,194 @@ class SaplingClient:
         :type session_id: str
         '''
         url = f'{self.url_endpoint}edits/{edit_uuid}/reject'
+        session_id = session_id or self.default_session_id
+        data = {
+            'key': self.api_key,
+            'session_id': session_id,
+        }
+        resp = requests.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if 200 <= resp.status_code < 300:
+            return
+        raise Exception(f'HTTP {resp.status_code}: resp.text')
+
+    def spellcheck(
+        self,
+        text,
+        session_id=None,
+        min_length=None,
+        multiple_edits=None,
+        lang=None,
+        auto_apply=False,
+        variety=None,
+        user_data=None,
+    ):
+        '''
+        Fetches spelling (no grammar or phrase level) edits for provided text.
+
+        :param text: Text to process for edits.
+        :type text: str
+        :param session_id: Unique name or UUID of document or portion of text that is being checked
+        :type session_id: str
+        :param min_length: Default is 3. Minimum character length of words to suggest corrections for. Setting this too low will result in much higher false positives.
+        :type min_length: int
+        :param multiple_edits: Default is false. If true, will return `candidates` field containing list of other potential corrections for each error.
+        :type multiple_edits: bool
+        :param lang: Default is English. Specify a language to spellcheck the text against.
+        :type lang: str
+        :param auto_apply: Whether to return a field with edits applied to the text. Cannot be set with multiple_edits option.
+        :type auto_apply: bool
+        :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
+        :type variety: str
+
+        :rtype: list[dict]
+
+        Supported languages:
+            - `en`: English
+            - `ar`: عربي
+            - `bg`: български
+            - `ca`: català
+            - `cs`: čeština
+            - `da`: dansk
+            - `de`: Deutsch
+            - `el`: Ελληνικά
+            - `es`: español
+            - `et`: eesti keel
+            - `fa`: فارسی
+            - `fi`: suomi
+            - `fr`: français (`fr-fr` and `fr-ca` coming soon)
+            - `he`: עִבְרִית
+            - `hi`: हिन्दी",
+            - `hr`: hrvatski,
+            - `hu`: magyar nyelv
+            - `id`: bahasa Indonesia
+            - `is`: íslenska
+            - `it`: italiano
+            - `jp/ja`: 日本語
+            - `ko`: 한국어
+            - `lt`: lietuvių kalba
+            - `lv`: latviešu valoda
+            - `nl`: Nederlands
+            - `no`: norsk
+            - `pl`: polski
+            - `pt`: português
+            - `ro`: limba română
+            - `ru`: русский
+            - `sk`: slovenčina
+            - `sq`: shqip
+            - `sr`: srpski
+            - `sv`: svenska
+            - `th`: ภาษาไทย
+            - `tl`: Tagalog / ᜆᜄᜎᜓᜄ᜔
+            - `tr`: Türkçe
+            - `uk`: Українська мова
+            - `vi`: Tiếng Việt
+            - `zh`: 中文
+
+
+        Supported varieties:
+            - `us-variety`: American English
+            - `gb-variety`: British English
+            - `au-variety`: Australian English
+            - `ca-variety`: Canadian English
+            - `null-variety`: Don't suggest changes based on English variety
+
+        '''
+        url = self.url_endpoint + 'spellcheck'
+        session_id = session_id or self.default_session_id
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'session_id': session_id,
+        }
+
+        if min_length is not None:
+            data['min_length'] = min_length
+        if multiple_edits is not None:
+            data['multiple_edits'] = multiple_edits
+        if lang is not None:
+            data['lang'] = lang
+        if auto_apply is not None:
+            data['auto_apply'] = auto_apply
+        if variety is not None:
+            data['variety'] = variety
+        if user_data is not None:
+            data['user_data'] = user_data
+
+        resp = requests.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if 200 <= resp.status_code < 300:
+            resp_json = resp.json()
+            return resp_json.get('edits')
+        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+
+
+    def complete(
+        self,
+        query,
+        session_id=None,
+    ):
+        '''
+        Provides predictions of the next few characters or words
+
+        :param query: Text to get completions against.
+        :type query: str
+        :param session_id: Unique name or UUID of document or portion of text that is being checked
+        :type session_id: str
+        '''
+        url = self.url_endpoint + 'complete'
+        session_id = session_id or self.default_session_id
+        data = {
+            'key': self.api_key,
+            'query': query,
+            'session_id': session_id,
+        }
+
+        resp = requests.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if 200 <= resp.status_code < 300:
+            resp_json = resp.json()
+            return resp_json
+        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+
+    def accept_complete(
+        self,
+        complete_uuid,
+        query,
+        completion,
+        session_id=None,
+    ):
+        '''
+        Use this API endpoint to have Sapling improve completions over time.
+
+        Each suggested autocomplete has a UUID. You can pass this information back to Sapling to
+        indicate the suggestion was helpful.
+
+        :param complete_uuid: Opaque UUID of the edit returned from the complete endpoint.
+        :type complete_uuid: str, uuid
+        :param query: The query text passed to the complete endpoint.
+        :type query: str
+        :param completion: The suggested completion text returned from the complete endpoint.
+        :type completion: str
+        '''
+        url = f'{self.url_endpoint}complete/{complete_uuid}/accept'
         session_id = session_id or uuid.uuid4()
         data = {
             'key': self.api_key,
             'session_id': session_id,
+            'context': {
+                'query': query,
+                'completion': completion,
+            }
         }
         resp = requests.post(
             url,
