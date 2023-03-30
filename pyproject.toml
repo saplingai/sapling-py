@@ -3,6 +3,6 @@ requires = ["flit_core >=3.2,<4", "requests==2.27.1", "myst_parser==0.17.0"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "sapling"
+name = "sapling-py"
 authors = [{name = "Sapling Intelligence", email = "support@sapling.ai"}]
 dynamic = ["version", "description"]
