@@ -3,3 +3,4 @@ build/*
 dist/*
 sapling_py.egg-info/*
 env/*
+**.DS_Store
