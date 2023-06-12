@@ -397,3 +397,130 @@ class SaplingClient:
         if 200 <= resp.status_code < 300:
             return resp.json()
         raise Exception(f'HTTP {resp.status_code}: resp.text')
+
+    def chunk_text(
+        self,
+        text,
+        max_length,
+        step_size=None,
+    ):
+        '''
+        Break an input text into blocks of length of most max_length. When splitting the text, the API follows the following preference stack:
+
+        page break > paragraph breaks > line breaks > tabs > punctuation > all other whitespace
+
+        :param text: Text to be chunked
+        :type text: str
+        :param max_length: Maximum length of text segments.
+        :type max_length: integer
+        :param step_size: Size of window to look for split points.
+        :type step_size: integer
+        :rtype: dict
+        :return:
+            - chunks: List of resulting chunks
+        '''
+        url = f'{self.url_endpoint}ingest/chunk_text'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'max_length': max_length
+        }
+        if step_size is not None:
+            data['step_size'] = step_size
+        resp = requests.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if 200 <= resp.status_code < 300:
+            return resp.json()
+        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+
+    def chunk_html(
+        self,
+        html,
+        max_length,
+        step_size=None,
+    ):
+        '''
+        Break an input text into blocks of length of most max_length. When splitting the text, the API follows the following preference stack:
+
+        page break > paragraph breaks > line breaks > tabs > punctuation > all other whitespace
+
+        Note: This endpoint not only breaks up the HTML but also discards all HTML tags, resulting in plain text.
+
+        :param html: HTML to be chunked
+        :type html: str
+        :param max_length: Maximum length of text segments.
+        :type max_length: integer
+        :param step_size: Size of window to look for split points.
+        :type step_size: integer
+        :rtype: dict
+        :return:
+            - chunks: List of resulting chunks representing the segmented text contained within the HTML
+        '''
+        url = f'{self.url_endpoint}ingest/chunk_html'
+        data = {
+            'key': self.api_key,
+            'html': html,
+            'max_length': max_length
+        }
+        if step_size is not None:
+            data['step_size'] = step_size
+        resp = requests.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if 200 <= resp.status_code < 300:
+            return resp.json()
+        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+
+    def postprocess(
+        self,
+        text,
+        session_id,
+        operations,
+    ):
+        '''
+        Performs a variety of operations that are useful for working with the outputs of an NLP (whether human or AI) system. These include:
+            - Fixing or restoring punctuation
+            - Fixing capitalization
+            - Fixing or restoring whitespace
+        Example use cases include repairing transcriptions or captions.
+
+        :param text: Text to postprocess
+        :type text: str
+        :param session_id: Unique name or UUID of document or portion of text that is being chunked
+        :type text: str
+        :param operations: Operations to apply. The currently accepted operations are:
+            - capitalize
+            - punctuate
+            - fixspaces
+        :type operations: list[str]
+        :rtype: list[dict]
+        :return:
+            Same as the edits endpoint:
+            - sentence: Unedited sentence
+            - sentence_start: Offset of sentence from start of text
+            - start: Offset of edit start relative to sentence
+            - end: Offset of edit end relative to sentence
+            - replacement: Suggested replacement
+            - error_type: Error type
+            - general_error_type: General Error type
+        '''
+        url = f'{self.url_endpoint}postprocess'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'session_id': session_id,
+            'operations': operations,
+        }
+        resp = requests.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if 200 <= resp.status_code < 300:
+            return resp.json()
+        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
