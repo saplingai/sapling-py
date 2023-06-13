@@ -53,15 +53,17 @@ class SaplingClient:
         :type medical: bool
         :param auto_apply: Whether to return a field with edits applied to the text
         :type auto_apply: bool
-        :rtype: list[dict]
+        :rtype: dict
         :return:
-            - sentence: Unedited sentence
-            - sentence_start: Offset of sentence from start of text
-            - start: Offset of edit start relative to sentence
-            - end: Offset of edit end relative to sentence
-            - replacement: Suggested replacement
-            - error_type: Error type
-            - general_error_type: General Error type
+            - edits: List of Edits:
+                - sentence: Unedited sentence
+                - sentence_start: Offset of sentence from start of text
+                - start: Offset of edit start relative to sentence
+                - end: Offset of edit end relative to sentence
+                - replacement: Suggested replacement
+                - error_type: Error type
+                - general_error_type: General Error type
+            - applied_text: Transformed text if auto_apply is set.
 
         Supported languages:
             - `de`:  German (Deutsch)
@@ -110,8 +112,7 @@ class SaplingClient:
             timeout=self.timeout,
         )
         if 200 <= resp.status_code < 300:
-            resp_json = resp.json()
-            return resp_json.get('edits')
+            return resp.json()
         raise Exception(f'HTTP {resp.status_code}: {resp.text}')
 
     def accept_edit(
