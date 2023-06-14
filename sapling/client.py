@@ -487,6 +487,7 @@ class SaplingClient:
             - Fixing or restoring punctuation
             - Fixing capitalization
             - Fixing or restoring whitespace
+
         Example use cases include repairing transcriptions or captions.
 
         :param text: Text to postprocess
@@ -497,6 +498,7 @@ class SaplingClient:
             - capitalize
             - punctuate
             - fixspaces
+
         :type operations: list[str]
         :rtype: list[dict]
         :return:
