@@ -37,6 +37,7 @@ class SaplingClient:
         variety=None,
         medical=None,
         auto_apply=False,
+        advanced_edits=None,
     ):
         '''
         Fetches edits (including for grammar and spelling) for provided text.
@@ -53,6 +54,28 @@ class SaplingClient:
         :type medical: bool
         :param auto_apply: Whether to return a field with edits applied to the text
         :type auto_apply: bool
+        :param advanced_edits: Additional edit configurations
+        :type advanced_edits: dict
+            Options:
+                - advanced_edits
+                - adverbs
+                - simplifications
+                - hard_to_read
+                - qualifiers
+                - voice
+                - dei
+                - gender
+                - gender_pronoun
+                - gender_noun
+                - gender_id
+                - sensitivity
+                - disability
+                - age
+                - race
+                - social_class
+                - violence
+\
+
         :rtype: dict
         :return:
             - edits: List of Edits:
@@ -105,6 +128,8 @@ class SaplingClient:
             data['medical'] = medical
         if auto_apply is not None:
             data['auto_apply'] = auto_apply
+        if advanced_edits is not None:
+            data['advanced_edits'] = advanced_edits
 
         resp = requests.post(
             url,
@@ -205,6 +230,8 @@ class SaplingClient:
         :type lang: str
         :param auto_apply: Whether to return a field with edits applied to the text. Cannot be set with multiple_edits option.
         :type auto_apply: bool
+        :param advanced_edits: additional edit checking options
+        :type advanced_edits: dict
         :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
         :type variety: str
 
