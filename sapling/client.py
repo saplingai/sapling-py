@@ -46,8 +46,8 @@ class SaplingClient:
         :type text: str
         :param session_id: Unique name or UUID of document or portion of text that is being checked
         :type session_id: str
-        :param session_id: 2 letter ISO 639-1 language code
-        :type session_id: str
+        :param lang: 2 letter ISO 639-1 language code
+        :type lang: str
         :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
         :type variety: str
         :param medical: If true, the backend will apply Sapling's medical dictionary.
@@ -56,26 +56,6 @@ class SaplingClient:
         :type auto_apply: bool
         :param advanced_edits: Additional edit configurations
         :type advanced_edits: dict
-            Options:
-                - advanced_edits
-                - adverbs
-                - simplifications
-                - hard_to_read
-                - qualifiers
-                - voice
-                - dei
-                - gender
-                - gender_pronoun
-                - gender_noun
-                - gender_id
-                - sensitivity
-                - disability
-                - age
-                - race
-                - social_class
-                - violence
-\
-
         :rtype: dict
         :return:
             - edits: List of Edits:
@@ -111,6 +91,24 @@ class SaplingClient:
             - `ca-variety`: Canadian English
             - `null-variety`: Don't suggest changes based on English variety
 
+        Supported advanced_edit options:
+            - advanced_edits
+            - adverbs
+            - simplifications
+            - hard_to_read
+            - qualifiers
+            - voice
+            - dei
+            - gender
+            - gender_pronoun
+            - gender_noun
+            - gender_id
+            - sensitivity
+            - disability
+            - age
+            - race
+            - social_class
+            - violence
         '''
 
         url = self.url_endpoint + 'edits'
