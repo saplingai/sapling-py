@@ -38,6 +38,8 @@ class SaplingClient:
         medical=None,
         auto_apply=False,
         advanced_edits=None,
+        user_id=None,
+        is_anon_user=None,
     ):
         '''
         Fetches edits (including for grammar and spelling) for provided text.
@@ -56,6 +58,10 @@ class SaplingClient:
         :type auto_apply: bool
         :param advanced_edits: Additional edit configurations
         :type advanced_edits: dict
+        :param user_id: Track IDs representing your end users
+        :type user_id: str
+        :param is_anon_user: If user_id represents a logged-in or anonymous user
+        :type is_anon_user: bool
         :rtype: dict
         :return:
             - edits: List of Edits:
@@ -129,6 +135,11 @@ class SaplingClient:
         if advanced_edits is not None:
             data['advanced_edits'] = advanced_edits
 
+        if user_id is not None:
+            data['user_id'] = user_id
+        if is_anon_user is not None:
+            data['is_anon_user'] = is_anon_user
+
         resp = requests.post(
             url,
             json=data,
@@ -142,6 +153,7 @@ class SaplingClient:
         self,
         edit_uuid,
         session_id=None,
+        user_id=None,
     ):
         '''
         Use this API endpoint to have Sapling adapt its system over time.
@@ -154,6 +166,8 @@ class SaplingClient:
         :type edit_uuid: str, uuid
         :param session_id: Unique name or UUID of text that is being processed
         :type session_id: str
+        :param user_id: Track IDs representing your end users
+        :type user_id: str
         '''
         url = f'{self.url_endpoint}edits/{edit_uuid}/accept'
         session_id = session_id or self.default_session_id
@@ -161,6 +175,10 @@ class SaplingClient:
             'key': self.api_key,
             'session_id': session_id,
         }
+
+        if user_id is not None:
+            data['user_id'] = user_id
+
         resp = requests.post(
             url,
             json=data,
@@ -174,6 +192,7 @@ class SaplingClient:
         self,
         edit_uuid,
         session_id=None,
+        user_id=None,
     ):
         '''
         Use this API endpoint to have Sapling not recommend the same edit anymore.
@@ -186,6 +205,8 @@ class SaplingClient:
         :type edit_uuid: str, uuid
         :param session_id: Unique name or UUID of text that is being processed
         :type session_id: str
+        :param user_id: Track IDs representing your end users
+        :type user_id: str
         '''
         url = f'{self.url_endpoint}edits/{edit_uuid}/reject'
         session_id = session_id or self.default_session_id
@@ -193,6 +214,10 @@ class SaplingClient:
             'key': self.api_key,
             'session_id': session_id,
         }
+
+        if user_id is not None:
+            data['user_id'] = user_id
+
         resp = requests.post(
             url,
             json=data,
@@ -212,6 +237,8 @@ class SaplingClient:
         auto_apply=False,
         variety=None,
         user_data=None,
+        user_id=None,
+        is_anon_user=None
     ):
         '''
         Fetches spelling (no grammar or phrase level) edits for provided text.
@@ -232,6 +259,10 @@ class SaplingClient:
         :type advanced_edits: dict
         :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
         :type variety: str
+        :param user_id: Track IDs representing your end users
+        :type user_id: str
+        :param is_anon_user: If user_id represents a logged-in or anonymous user
+        :type is_anon_user: bool
 
         :rtype: list[dict]
 
@@ -306,6 +337,11 @@ class SaplingClient:
             data['variety'] = variety
         if user_data is not None:
             data['user_data'] = user_data
+
+        if user_id is not None:
+            data['user_id'] = user_id
+        if is_anon_user is not None:
+            data['is_anon_user'] = is_anon_user
 
         resp = requests.post(
             url,
