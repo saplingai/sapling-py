@@ -349,8 +349,7 @@ class SaplingClient:
             timeout=self.timeout,
         )
         if 200 <= resp.status_code < 300:
-            resp_json = resp.json()
-            return resp_json.get('edits')
+            return resp.json()
         raise Exception(f'HTTP {resp.status_code}: {resp.text}')
 
 
@@ -381,8 +380,7 @@ class SaplingClient:
             timeout=self.timeout,
         )
         if 200 <= resp.status_code < 300:
-            resp_json = resp.json()
-            return resp_json
+            return resp.json()
         raise Exception(f'HTTP {resp.status_code}: {resp.text}')
 
     def accept_complete(
