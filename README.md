@@ -11,7 +11,7 @@ Sapling is a toolkit for helping developers build language model-powered applica
 The API provides spelling and grammar checking, autocomplete, tone detection, rephrasing, AI detection, and more.
 
 Key Features:
-- **60% More Corrections**: Outperforms [competing solutions](https://sapling.ai/comparison/api) at similar accuracy levels using state-of-the-art generative AI models.
+- **60% More Corrections**: Outperforms [competing solutions](https://sapling.ai/comparison/api#sapling) at similar accuracy levels using state-of-the-art generative AI models.
 - **Real-Time Performance**: Experience the same low-latency corrections as Sapling's native integrations.
 - **Comprehensive Error Detection**: Identifies over 20 error types including prepositions, noun forms, verb tense, with both high-level and fine-grained error information.
 - **Domain-Specific Models**: Get corrections optimized for your content type, from academic writing, to doctors notes, to user-generated reviews.
