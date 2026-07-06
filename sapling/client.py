@@ -1,6 +1,21 @@
 import requests
 import uuid
 
+
+class SaplingError(Exception):
+    '''
+    Raised when the Sapling API returns a non-2xx response.
+
+    :ivar status_code: HTTP status code returned by the API.
+    :ivar body: Raw response body returned by the API (may be empty).
+    '''
+
+    def __init__(self, status_code, body=None):
+        self.status_code = status_code
+        self.body = body
+        super().__init__(f'HTTP {status_code}: {body}')
+
+
 class SaplingClient:
     '''
     Sapling client class. Provides a mapping of Python functions to Sapling HTTP REST APIs.
@@ -28,6 +43,32 @@ class SaplingClient:
         self.pathname = pathname or '/api/v1/'
         self.url_endpoint = self.hostname + self.pathname
         self.default_session_id = str(uuid.uuid4())
+        self.session = requests.Session()
+
+    def _request(self, url, data):
+        '''
+        Issues a POST request to the Sapling API and returns the parsed JSON body.
+
+        :param url: Fully-qualified endpoint URL.
+        :type url: str
+        :param data: JSON-serializable request body.
+        :type data: dict
+        :rtype: dict, list, or None
+        :raises SaplingError: If the API responds with a non-2xx status code.
+        '''
+        resp = self.session.post(
+            url,
+            json=data,
+            timeout=self.timeout,
+        )
+        if not 200 <= resp.status_code < 300:
+            raise SaplingError(resp.status_code, resp.text)
+        if not resp.content:
+            return None
+        try:
+            return resp.json()
+        except ValueError:
+            return None
 
     def edits(
         self,
@@ -140,14 +181,7 @@ class SaplingClient:
         if is_anon_user is not None:
             data['is_anon_user'] = is_anon_user
 
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+        return self._request(url, data)
 
     def accept_edit(
         self,
@@ -179,14 +213,7 @@ class SaplingClient:
         if user_id is not None:
             data['user_id'] = user_id
 
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return
-        raise Exception(f'HTTP {resp.status_code}: resp.text')
+        self._request(url, data)
 
     def reject_edit(
         self,
@@ -218,14 +245,7 @@ class SaplingClient:
         if user_id is not None:
             data['user_id'] = user_id
 
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return
-        raise Exception(f'HTTP {resp.status_code}: resp.text')
+        self._request(url, data)
 
     def spellcheck(
         self,
@@ -255,8 +275,8 @@ class SaplingClient:
         :type lang: str
         :param auto_apply: Whether to return a field with edits applied to the text. Cannot be set with multiple_edits option.
         :type auto_apply: bool
-        :param advanced_edits: additional edit checking options
-        :type advanced_edits: dict
+        :param user_data: Optional custom data (e.g. a personal dictionary) to inform spellchecking.
+        :type user_data: dict
         :param variety: Specifies regional English variety preference. Defaults to the configuration in the user Sapling dashboard.
         :type variety: str
         :param user_id: Track IDs representing your end users
@@ -343,14 +363,7 @@ class SaplingClient:
         if is_anon_user is not None:
             data['is_anon_user'] = is_anon_user
 
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+        return self._request(url, data)
 
 
     def complete(
@@ -374,14 +387,7 @@ class SaplingClient:
             'session_id': session_id,
         }
 
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+        return self._request(url, data)
 
     def accept_complete(
         self,
@@ -404,7 +410,7 @@ class SaplingClient:
         :type completion: str
         '''
         url = f'{self.url_endpoint}complete/{complete_uuid}/accept'
-        session_id = session_id or uuid.uuid4()
+        session_id = session_id or self.default_session_id
         data = {
             'key': self.api_key,
             'session_id': session_id,
@@ -413,14 +419,7 @@ class SaplingClient:
                 'completion': completion,
             }
         }
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return
-        raise Exception(f'HTTP {resp.status_code}: resp.text')
+        self._request(url, data)
 
     def aidetect(
         self,
@@ -430,7 +429,7 @@ class SaplingClient:
         '''
         Score a piece of text on how likely it was generated by AI.
 
-        :param text: Text to
+        :param text: Text to score for AI-generated content.
         :type text: str
         :param sent_scores: If true, each sentence will also be scored individually.
         :type sent_scores: bool
@@ -449,14 +448,7 @@ class SaplingClient:
         }
         if sent_scores is not None:
             data['sent_scores'] = sent_scores
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: resp.text')
+        return self._request(url, data)
 
     def chunk_text(
         self,
@@ -487,14 +479,7 @@ class SaplingClient:
         }
         if step_size is not None:
             data['step_size'] = step_size
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+        return self._request(url, data)
 
     def chunk_html(
         self,
@@ -527,14 +512,7 @@ class SaplingClient:
         }
         if step_size is not None:
             data['step_size'] = step_size
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+        return self._request(url, data)
 
     def postprocess(
         self,
@@ -578,11 +556,188 @@ class SaplingClient:
             'session_id': session_id,
             'operations': operations,
         }
-        resp = requests.post(
-            url,
-            json=data,
-            timeout=self.timeout,
-        )
-        if 200 <= resp.status_code < 300:
-            return resp.json()
-        raise Exception(f'HTTP {resp.status_code}: {resp.text}')
+        return self._request(url, data)
+
+    def rephrase(
+        self,
+        text,
+        mapping=None,
+        tone_mapping=None,
+        tense_mapping=None,
+        num_results=None,
+        session_id=None,
+    ):
+        '''
+        Rephrases the input text, optionally applying a style transformation.
+
+        Given an input sentence, returns output sentences that preserve meaning
+        but use alternative phrasings or styles.
+
+        :param text: Text to rephrase. Current maximum length is 400 characters.
+        :type text: str
+        :param mapping: The transformation to apply. Defaults to `paraphrase`.
+            Options include: `paraphrase`, `informal_to_formal`, `passive_to_active`,
+            `active_to_passive`, `sentence_split`, `expand`, and `switch_tone`.
+        :type mapping: str
+        :param tone_mapping: Target tone when `mapping` is `switch_tone`. Options
+            include: `straightforward`, `confident`, `friendly`, and `empathetic`.
+        :type tone_mapping: str
+        :param tense_mapping: Target tense transformation, when applicable.
+        :type tense_mapping: str
+        :param num_results: Number of results to return (currently only for
+            `paraphrase`). Minimum 1, maximum 8. Defaults to 5.
+        :type num_results: int
+        :param session_id: Unique name or UUID of document or portion of text that is being processed
+        :type session_id: str
+        :rtype: dict
+        :return:
+            - results: List of rephrases, each with `original`, `replacement`,
+              `rephrase_type`, `model_version`, and `hash`.
+        '''
+        url = self.url_endpoint + 'rephrase'
+        session_id = session_id or self.default_session_id
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'session_id': session_id,
+        }
+        if mapping is not None:
+            data['mapping'] = mapping
+        if tone_mapping is not None:
+            data['tone_mapping'] = tone_mapping
+        if tense_mapping is not None:
+            data['tense_mapping'] = tense_mapping
+        if num_results is not None:
+            data['num_results'] = num_results
+        return self._request(url, data)
+
+    def summarize(
+        self,
+        text,
+    ):
+        '''
+        Summarizes a longer document into a shorter, more digestible one.
+
+        :param text: Input document to summarize.
+        :type text: str
+        :rtype: dict
+        :return:
+            - result: The summarized text.
+        '''
+        url = self.url_endpoint + 'summarize'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        return self._request(url, data)
+
+    def tone(
+        self,
+        text,
+    ):
+        '''
+        Detects the tone of the provided text across 28 fine-grained categories.
+
+        The overall tone is returned along with the tone for each sentence.
+
+        :param text: Text to analyze the tone for.
+        :type text: str
+        :rtype: dict
+        :return:
+            - sents: The sentences the text contains.
+            - overall: List of ``(probability, tone, emoji)`` tuples for the whole text.
+            - results: For each sentence, a list of ``(probability, tone, emoji)`` tuples.
+        '''
+        url = self.url_endpoint + 'tone'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        return self._request(url, data)
+
+    def sentiment(
+        self,
+        text,
+    ):
+        '''
+        Detects the sentiment (positive, negative, or neutral) of the provided text.
+
+        The overall sentiment is returned along with the sentiment for each sentence.
+
+        :param text: Text to analyze the sentiment for.
+        :type text: str
+        :rtype: dict
+        :return:
+            - sents: The sentences the text contains.
+            - overall: List of ``(probability, sentiment)`` tuples for the whole text.
+            - results: For each sentence, a list of ``(probability, sentiment)`` tuples.
+        '''
+        url = self.url_endpoint + 'sentiment'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        return self._request(url, data)
+
+    def quality(
+        self,
+        text,
+    ):
+        '''
+        Computes a quality score for the provided text based on how "surprising"
+        the text is to the model. Lower surprisal corresponds to higher scores.
+
+        :param text: Text to compute a quality score for.
+        :type text: str
+        :rtype: dict
+        :return:
+            - score: A score from 1 (low quality) to 5 (high quality).
+        '''
+        url = self.url_endpoint + 'quality'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        return self._request(url, data)
+
+    def langdetect(
+        self,
+        text,
+    ):
+        '''
+        Identifies the language of the provided text.
+
+        :param text: Text to identify the language for.
+        :type text: str
+        :rtype: dict
+        :return:
+            - lang: The detected language code.
+            - conf: Confidence score for the detection result.
+        '''
+        url = self.url_endpoint + 'langdetect'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        return self._request(url, data)
+
+    def profanity(
+        self,
+        text,
+    ):
+        '''
+        Checks the provided text for profanity, returning a 0/1 label per token.
+
+        :param text: Text to check for profanity.
+        :type text: str
+        :rtype: dict
+        :return:
+            - toks: The tokens (words) detected in the text.
+            - labels: For each token, 0 (not profanity) or 1 (profanity).
+        '''
+        url = self.url_endpoint + 'profanity'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        return self._request(url, data)
