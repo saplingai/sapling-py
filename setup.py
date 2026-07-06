@@ -20,13 +20,22 @@ setup(
     author_email='info@sapling.ai',
     license='Apache License 2.0',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
+        'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3 :: Only',
     ],
-    packages=find_packages(),
+    packages=find_packages(exclude=['test', 'test.*']),
     package_data={'':[]},
     include_package_data=True,
+    python_requires='>=3.7',
     install_requires=[
         'requests'
     ],
+    extras_require={
+        'test': [
+            'pytest',
+            'responses',
+        ],
+    },
 )
