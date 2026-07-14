@@ -1,0 +1,66 @@
+name: Claude Code with Max-to-API fallback
+description: Run Claude Code with Max OAuth first, then Anthropic API billing on failure.
+
+inputs:
+  oauth-token:
+    description: Claude Code OAuth token backed by a Pro or Max plan.
+    required: false
+  api-key:
+    description: Anthropic API key used when the OAuth-backed run cannot complete.
+    required: false
+  github-token:
+    description: Explicit GitHub token used instead of the Claude GitHub App token.
+    required: false
+  claude-args:
+    description: Arguments forwarded to Claude Code.
+    required: false
+    default: "--model claude-opus-4-8"
+  prompt:
+    description: Optional prompt for agent-mode workflows.
+    required: false
+  allowed-bots:
+    description: Optional comma-separated bots allowed to trigger Claude.
+    required: false
+  additional-permissions:
+    description: Optional permissions forwarded to the Claude Code action.
+    required: false
+
+outputs:
+  structured-output:
+    description: Structured JSON returned by the successful Claude run.
+    value: ${{ steps.max_plan.outputs.structured_output || steps.api.outputs.structured_output }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run Claude Code with Max plan
+      id: max_plan
+      if: inputs['oauth-token'] != ''
+      continue-on-error: true
+      uses: anthropics/claude-code-action@v1
+      with:
+        claude_code_oauth_token: ${{ inputs['oauth-token'] }}
+        github_token: ${{ inputs['github-token'] }}
+        claude_args: ${{ inputs['claude-args'] }}
+        prompt: ${{ inputs.prompt }}
+        allowed_bots: ${{ inputs['allowed-bots'] }}
+        additional_permissions: ${{ inputs['additional-permissions'] }}
+
+    - name: Fall back to Anthropic API billing
+      id: api
+      if: ${{ !cancelled() && steps.max_plan.outcome != 'success' && inputs['api-key'] != '' }}
+      uses: anthropics/claude-code-action@v1
+      with:
+        anthropic_api_key: ${{ inputs['api-key'] }}
+        github_token: ${{ inputs['github-token'] }}
+        claude_args: ${{ inputs['claude-args'] }}
+        prompt: ${{ inputs.prompt }}
+        allowed_bots: ${{ inputs['allowed-bots'] }}
+        additional_permissions: ${{ inputs['additional-permissions'] }}
+
+    - name: Require a successful Claude run
+      if: ${{ !cancelled() && steps.max_plan.outcome != 'success' && steps.api.outcome != 'success' }}
+      shell: bash
+      run: |
+        echo "Claude could not run with either Max OAuth or Anthropic API billing." >&2
+        exit 1
