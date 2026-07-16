@@ -9,8 +9,12 @@ project = 'Sapling'
 copyright = '2022, Sapling'
 author = 'Sapling Intelligence'
 
-release = '0.1'
-version = '0.1.0'
+about = {}
+with open(os.path.join(os.path.dirname(__file__), '../../sapling/version.py')) as f:
+    exec(f.read(), about)
+
+release = about['__version__']
+version = about['__version__']
 
 # -- General configuration
 
