@@ -741,3 +741,33 @@ class SaplingClient:
             'text': text,
         }
         return self._request(url, data)
+
+    def safety(
+        self,
+        text,
+        threshold=None,
+    ):
+        '''
+        Scores the provided text on seven content-safety categories: toxicity,
+        profanity, harassment, hate_speech, self_harm, sexual, and violence.
+
+        :param text: Text to score, up to 20,000 characters.
+        :type text: str
+        :param threshold: Score at or above which a category is flagged.
+            Between 0 and 1 inclusive; the API defaults to 0.5.
+        :type threshold: float
+        :rtype: dict
+        :return:
+            - scores: A probability from 0 to 1 for each category.
+            - flagged: True if any category scored at or above the threshold.
+            - flagged_categories: Categories that scored at or above the threshold.
+            - threshold: The threshold that was applied.
+        '''
+        url = self.url_endpoint + 'safety'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        if threshold is not None:
+            data['threshold'] = threshold
+        return self._request(url, data)

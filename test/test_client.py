@@ -139,6 +139,10 @@ def test_rephrase_sends_expected_params(client):
         ('quality', 'quality', {'score': 3.5}),
         ('langdetect', 'langdetect', {'lang': 'en', 'conf': 0.99}),
         ('profanity', 'profanity', {'toks': ['a'], 'labels': [0]}),
+        ('safety', 'safety', {
+            'scores': {'toxicity': 0.9}, 'flagged': True,
+            'flagged_categories': ['toxicity'], 'threshold': 0.5,
+        }),
     ],
 )
 @responses.activate
