@@ -703,22 +703,38 @@ class SaplingClient:
     def langdetect(
         self,
         text,
+        top_k=None,
+        segments=None,
     ):
         '''
-        Identifies the language of the provided text.
+        Identifies the language of the provided text, with optional runner-up
+        candidates and a per-segment breakdown for mixed-language text.
 
-        :param text: Text to identify the language for.
+        :param text: Text to identify the language for (up to 20,000 characters).
         :type text: str
+        :param top_k: Number of language candidates to return, 1-10. Defaults to 3 server-side.
+        :type top_k: int
+        :param segments: If true, also detect the language of each line/sentence
+            of the text and return them under `segments`.
+        :type segments: bool
         :rtype: dict
         :return:
-            - lang: The detected language code.
+            - lang: The detected language code (mostly ISO 639-1).
+            - name: English name of the detected language.
             - conf: Confidence score for the detection result.
+            - candidates: List of {lang, name, conf} for the top languages, most likely first.
+            - segments: If segments is set, list of {start, end, text, lang, name, conf, candidates}
+              in document order; start/end are character offsets into the text.
         '''
         url = self.url_endpoint + 'langdetect'
         data = {
             'key': self.api_key,
             'text': text,
         }
+        if top_k is not None:
+            data['top_k'] = top_k
+        if segments is not None:
+            data['segments'] = segments
         return self._request(url, data)
 
     def profanity(

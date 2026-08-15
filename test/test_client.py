@@ -155,6 +155,20 @@ def test_single_text_endpoints(client, method, path, payload):
 
 
 @responses.activate
+def test_langdetect_options(client):
+    payload = {
+        'lang': 'en', 'name': 'English', 'conf': 0.6,
+        'candidates': [{'lang': 'en', 'name': 'English', 'conf': 0.6}],
+        'segments': [{'start': 0, 'end': 5, 'text': 'Hello', 'lang': 'en', 'name': 'English',
+                      'conf': 0.9, 'candidates': [{'lang': 'en', 'name': 'English', 'conf': 0.9}]}],
+    }
+    responses.add(responses.POST, BASE + 'langdetect', json=payload, status=200)
+    result = client.langdetect('Hello', top_k=1, segments=True)
+    assert result == payload
+    assert _last_request_body() == {'key': API_KEY, 'text': 'Hello', 'top_k': 1, 'segments': True}
+
+
+@responses.activate
 def test_hostname_and_pathname_override():
     client = SaplingClient(api_key=API_KEY, hostname='http://localhost:5000', pathname='/api/v1/')
     responses.add(responses.POST, 'http://localhost:5000/api/v1/edits', json={'edits': []}, status=200)
