@@ -741,3 +741,46 @@ class SaplingClient:
             'text': text,
         }
         return self._request(url, data)
+
+    def pii(
+        self,
+        text,
+        types=None,
+        redact=None,
+    ):
+        '''
+        Detects personally identifiable information (PII) in the provided text and
+        optionally returns a redacted copy.
+
+        Detection is deterministic (pattern matching plus checksum validation, no ML)
+        and every entity comes with exact character offsets into ``text``, so pass
+        raw text (not HTML) and apply the spans to your own copy of the document.
+        Person names and street addresses are not detected.
+
+        :param text: Text to scan for PII.
+        :type text: str
+        :param types: Optional list of PII types to detect. Defaults to all types:
+            ``email``, ``phone``, ``ssn``, ``credit_card``, ``ip_address``, ``iban``,
+            ``us_bank_routing``.
+        :type types: list[str]
+        :param redact: If True, the response also includes ``redacted_text`` with every
+            detected entity replaced by a placeholder such as ``[EMAIL]``.
+        :type redact: bool
+        :rtype: dict
+        :return:
+            - entities: List of ``{type, text, start, end, replacement}`` dicts, sorted
+              by ``start``; spans never overlap.
+            - flagged: True if any PII was detected.
+            - types: Sorted list of the PII types found.
+            - redacted_text: Only present when ``redact`` is True.
+        '''
+        url = self.url_endpoint + 'pii'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        if types is not None:
+            data['types'] = list(types)
+        if redact is not None:
+            data['redact'] = redact
+        return self._request(url, data)
