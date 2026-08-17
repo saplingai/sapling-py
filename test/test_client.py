@@ -174,3 +174,22 @@ def test_hostname_and_pathname_override():
     responses.add(responses.POST, 'http://localhost:5000/api/v1/edits', json={'edits': []}, status=200)
     client.edits('hi')
     assert responses.calls[-1].request.url == 'http://localhost:5000/api/v1/edits'
+
+@responses.activate
+def test_quality_options(client):
+    payload = {
+        'score': 3.4,
+        'sentences': [{'start': 0, 'end': 5, 'text': 'Hello', 'score': 4.1}],
+        'rubric': {
+            'overall': 3,
+            'dimensions': {'clarity': 4, 'coherence': 3, 'correctness': 3, 'concision': 2},
+            'summary': 'Fine.',
+            'issues': [{'quote': 'Hello', 'dimension': 'clarity', 'note': 'n',
+                        'suggestion': 'Hi', 'start': 0, 'end': 5}],
+        },
+    }
+    responses.add(responses.POST, BASE + 'quality', json=payload, status=200)
+    result = client.quality('Hello', sentence_scores=True, rubric=True)
+    assert result == payload
+    assert _last_request_body() == {'key': API_KEY, 'text': 'Hello',
+                                    'sentence_scores': True, 'rubric': True}
