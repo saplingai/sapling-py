@@ -682,22 +682,42 @@ class SaplingClient:
     def quality(
         self,
         text,
+        sentence_scores=None,
+        rubric=None,
     ):
         '''
         Computes a quality score for the provided text based on how "surprising"
         the text is to the model. Lower surprisal corresponds to higher scores.
+        Optionally also returns a per-sentence breakdown and an LLM-judged rubric.
 
-        :param text: Text to compute a quality score for.
+        :param text: Text to compute a quality score for. The base score is computed
+            on the leading ~4,000 characters; the rubric evaluates the whole text
+            (up to 20,000 characters).
         :type text: str
+        :param sentence_scores: If true, also return a 1-5 score for each sentence
+            under `sentences`.
+        :type sentence_scores: bool
+        :param rubric: If true, also return an LLM-judged rubric under `rubric`
+            (billed at the Tone rate).
+        :type rubric: bool
         :rtype: dict
         :return:
             - score: A score from 1 (low quality) to 5 (high quality).
+            - sentences: If sentence_scores is set, list of {start, end, text, score} in
+              document order; start/end are character offsets into the text.
+            - rubric: If rubric is set, {overall, dimensions: {clarity, coherence,
+              correctness, concision}, summary, issues: [{quote, dimension, note,
+              suggestion, start, end}]}; scores are integers 1-5.
         '''
         url = self.url_endpoint + 'quality'
         data = {
             'key': self.api_key,
             'text': text,
         }
+        if sentence_scores is not None:
+            data['sentence_scores'] = sentence_scores
+        if rubric is not None:
+            data['rubric'] = rubric
         return self._request(url, data)
 
     def langdetect(
