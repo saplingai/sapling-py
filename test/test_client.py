@@ -151,6 +151,26 @@ def test_single_text_endpoints(client, method, path, payload):
 
 
 @responses.activate
+def test_quality_options(client):
+    payload = {
+        'score': 3.4,
+        'sentences': [{'start': 0, 'end': 5, 'text': 'Hello', 'score': 4.1}],
+        'rubric': {
+            'overall': 3,
+            'dimensions': {'clarity': 4, 'coherence': 3, 'correctness': 3, 'concision': 2},
+            'summary': 'Fine.',
+            'issues': [{'quote': 'Hello', 'dimension': 'clarity', 'note': 'n',
+                        'suggestion': 'Hi', 'start': 0, 'end': 5}],
+        },
+    }
+    responses.add(responses.POST, BASE + 'quality', json=payload, status=200)
+    result = client.quality('Hello', sentence_scores=True, rubric=True)
+    assert result == payload
+    assert _last_request_body() == {'key': API_KEY, 'text': 'Hello',
+                                    'sentence_scores': True, 'rubric': True}
+
+
+@responses.activate
 def test_hostname_and_pathname_override():
     client = SaplingClient(api_key=API_KEY, hostname='http://localhost:5000', pathname='/api/v1/')
     responses.add(responses.POST, 'http://localhost:5000/api/v1/edits', json={'edits': []}, status=200)
