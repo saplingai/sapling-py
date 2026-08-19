@@ -741,3 +741,84 @@ class SaplingClient:
             'text': text,
         }
         return self._request(url, data)
+
+    def classify(
+        self,
+        text,
+        labels,
+        multi_label=None,
+        threshold=None,
+        context=None,
+    ):
+        '''
+        Classifies the provided text into one (or several) of the labels you supply.
+        Zero-shot: no training data or setup is needed, just the label names and,
+        optionally, a short description per label.
+
+        Example::
+
+            client.classify(
+                'I was charged twice for my last invoice.',
+                labels=[
+                    'billing',
+                    {'name': 'technical issue', 'description': 'Bugs, crashes, errors'},
+                    'shipping',
+                    'other',
+                ],
+                context='Support tickets for a SaaS billing product',
+            )
+            # {'label': 'billing',
+            #  'labels': ['billing'],
+            #  'scores': [{'label': 'billing', 'score': 0.86},
+            #             {'label': 'technical issue', 'score': 0.07},
+            #             {'label': 'shipping', 'score': 0.04},
+            #             {'label': 'other', 'score': 0.03}],
+            #  'rationale': 'The customer reports being charged twice on one invoice.',
+            #  'multi_label': False}
+
+        :param text: Text to classify, plain text or HTML (tags are stripped), up to
+            10,000 characters.
+        :type text: str
+        :param labels: 2-20 candidate labels. Each entry is either a label name (str) or
+            a dict ``{'name': str, 'description': str}`` where ``description`` is
+            optional. Names are up to 50 characters and must be unique
+            (case-insensitive); descriptions are up to 200 characters and help the
+            model with borderline decisions.
+        :type labels: list[str | dict]
+        :param multi_label: If False (the API default), exactly one label applies and
+            the scores form a probability distribution over the labels. If True, zero,
+            one or several labels may apply and each score is an independent 0-1
+            probability.
+        :type multi_label: bool
+        :param threshold: Multi-label cut-off, 0-1: ``labels`` in the response contains
+            every label with ``score >= threshold``. The API defaults to 0.5. Ignored in
+            single-label mode.
+        :type threshold: float
+        :param context: Up to 500 characters describing what the texts are or how to
+            decide (e.g. ``'Support tickets for a SaaS billing product'``). Guidance
+            only; the model can still only answer with the labels you provide.
+        :type context: str
+        :rtype: dict
+        :return:
+            - label: Best-matching label name (always one of the input labels).
+            - labels: Single-label mode: ``[label]``. Multi-label mode: every label
+              with ``score >= threshold``, descending by score; may be empty when none
+              of the labels apply.
+            - scores: One ``{label, score}`` dict per input label, sorted descending
+              by score (0-1, rounded to 4 decimals).
+            - rationale: One sentence naming the evidence in the text (may be empty).
+            - multi_label: The mode that was used.
+        '''
+        url = self.url_endpoint + 'classify'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'labels': list(labels),
+        }
+        if multi_label is not None:
+            data['multi_label'] = multi_label
+        if threshold is not None:
+            data['threshold'] = threshold
+        if context is not None:
+            data['context'] = context
+        return self._request(url, data)
