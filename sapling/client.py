@@ -850,3 +850,61 @@ class SaplingClient:
         if redact is not None:
             data['redact'] = redact
         return self._request(url, data)
+
+    def seo(
+        self,
+        text,
+        keywords=None,
+        suggestions=None,
+        lang=None,
+    ):
+        '''
+        Analyzes the provided page or article text for SEO: deterministic content
+        statistics and readability, target-keyword usage, the most frequent terms, and
+        (optionally) LLM-generated titles, meta descriptions, a URL slug, and focus
+        keywords.
+
+        :param text: Page or article body, plain text or HTML (block tags become line
+            breaks, inline tags are removed), up to 20,000 characters.
+        :type text: str
+        :param keywords: Optional list of up to 10 target keyword phrases, most
+            important first (the first is the primary keyword). Each 1-100 characters.
+            Measured in the text and steered into the suggestions.
+        :type keywords: list[str]
+        :param suggestions: If False, only the deterministic ``stats``, ``keywords`` and
+            ``top_terms`` are returned (free); no ``suggestions`` are generated. The API
+            defaults to True (billed at the Tone rate).
+        :type suggestions: bool
+        :param lang: ISO 639-1 language code of the text (a region subtag such as
+            ``pt-BR`` is allowed, or ``auto``). The API defaults to ``en``. Only selects
+            the readability formulas: ``flesch_reading_ease`` and
+            ``flesch_kincaid_grade`` are computed for ``en``, ``de``, ``es``, ``fr``,
+            ``it``, ``nl``, ``pl`` and ``ru`` and are None for any other language.
+        :type lang: str
+        :rtype: dict
+        :return:
+            - stats: ``{chars, words, sentences, paragraphs, reading_time_min,
+              flesch_reading_ease, flesch_kincaid_grade}``; the two readability fields
+              are None for languages without readability support.
+            - keywords: One ``{keyword, count, density, in_first_100_words}`` dict per
+              submitted target keyword, in the same order; empty when none were sent.
+            - top_terms: Up to 10 most frequent content unigrams/bigrams as
+              ``{term, count}`` dicts (lower-cased, English stopwords removed).
+            - suggestions: Only present when ``suggestions`` is not False:
+              ``{titles, meta_descriptions, slug, keywords}`` where ``titles`` and
+              ``meta_descriptions`` are lists of strings, ``slug`` is a kebab-case
+              string (or None when no ASCII slug could be derived, e.g. purely CJK
+              content) and ``keywords`` is a list of focus-keyword phrases.
+        '''
+        url = self.url_endpoint + 'seo'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        if keywords is not None:
+            data['keywords'] = list(keywords)
+        if suggestions is not None:
+            data['suggestions'] = suggestions
+        if lang is not None:
+            data['lang'] = lang
+        return self._request(url, data)
