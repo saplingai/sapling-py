@@ -952,6 +952,8 @@ class SaplingClient:
             (case-insensitive); descriptions are up to 200 characters and help the
             model with borderline decisions.
         :type labels: list[str | dict]
+        :raises TypeError: If ``labels`` is None, a single string or a dict rather
+            than a list/tuple of labels.
         :param multi_label: If False (the API default), exactly one label applies and
             the scores form a probability distribution over the labels. If True, zero,
             one or several labels may apply and each score is an independent 0-1
@@ -976,6 +978,11 @@ class SaplingClient:
             - rationale: One sentence naming the evidence in the text (may be empty).
             - multi_label: The mode that was used.
         '''
+        # A bare string would silently be split into one-character labels and
+        # None would raise an opaque TypeError from list(); fail loudly instead.
+        if labels is None or isinstance(labels, (str, bytes, dict)):
+            raise TypeError('labels must be a list of label names or '
+                            '{name, description} dicts')
         url = self.url_endpoint + 'classify'
         data = {
             'key': self.api_key,
