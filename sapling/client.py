@@ -631,6 +631,89 @@ class SaplingClient:
         }
         return self._request(url, data)
 
+    def extract(
+        self,
+        text,
+        fields,
+        context=None,
+    ):
+        '''
+        Extracts structured data from unstructured text: you name the fields you
+        want, the API returns their values pulled from the document. Every value is
+        grounded in a verbatim span of the input, so this is extraction rather than
+        summarization or inference; a field the text does not state is reported
+        missing rather than guessed.
+
+        Example::
+
+            client.extract(
+                'Invoice INV-1042 for Acme Corp, total $1,299.00, due March 5, 2026.',
+                fields=[
+                    'invoice_number',
+                    {'name': 'total', 'type': 'number', 'description': 'Amount due',
+                     'required': True},
+                    {'name': 'due_date', 'type': 'date'},
+                    'purchase_order',
+                ],
+                context='A vendor invoice',
+            )
+            # {'data': {'invoice_number': 'INV-1042', 'total': 1299.0,
+            #           'due_date': '2026-03-05', 'purchase_order': None},
+            #  'fields': [{'name': 'invoice_number', 'type': 'string',
+            #              'value': 'INV-1042', 'evidence': 'Invoice INV-1042',
+            #              'found': True},
+            #             {'name': 'total', 'type': 'number', 'value': 1299.0,
+            #              'evidence': 'total $1,299.00', 'found': True},
+            #             {'name': 'due_date', 'type': 'date', 'value': '2026-03-05',
+            #              'evidence': 'due March 5, 2026', 'found': True},
+            #             {'name': 'purchase_order', 'type': 'string', 'value': None,
+            #              'evidence': '', 'found': False}],
+            #  'missing': ['purchase_order']}
+
+        :param text: Document to extract from, plain text or HTML (tags are
+            stripped), up to 10,000 characters.
+        :type text: str
+        :param fields: 1-20 fields to extract. Each entry is either a field name
+            (str) or a dict ``{'name': str, 'type': str, 'description': str,
+            'required': bool}`` where everything but ``name`` is optional. Names are
+            up to 50 characters and must be unique (case-insensitive). ``type`` is
+            one of ``'string'`` (the default), ``'number'``, ``'integer'``,
+            ``'boolean'``, ``'date'`` or ``'list'``. ``description`` is up to 200
+            characters and sharpens ambiguous fields. ``required`` is a hint to the
+            model; a required field the text does not state is still reported
+            missing, never guessed.
+        :type fields: list[str | dict]
+        :raises TypeError: If ``fields`` is None, a single string or a dict rather
+            than a list/tuple of fields.
+        :param context: Up to 500 characters describing what the document is or how
+            to read ambiguous fields (e.g. ``'A vendor invoice'``).
+        :type context: str
+        :rtype: dict
+        :return:
+            - data: ``{field name: value}`` map. Every requested field is present,
+              with ``None`` where the text did not state it. ``date`` values are
+              ``YYYY-MM-DD`` strings and ``list`` values are lists of strings.
+            - fields: One dict per requested field, in the order requested, with
+              ``name``, ``type``, ``value``, the verbatim ``evidence`` span the value
+              came from (``''`` when not found) and ``found``.
+            - missing: Names of the fields the text did not yield, in request order.
+              Finding nothing is a normal, successful response.
+        '''
+        # A bare string would silently be split into one-character field names and
+        # None would raise an opaque TypeError from list(); fail loudly instead.
+        if fields is None or isinstance(fields, (str, bytes, dict)):
+            raise TypeError('fields must be a list of field names or '
+                            '{name, type, description, required} dicts')
+        url = self.url_endpoint + 'extract'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'fields': list(fields),
+        }
+        if context is not None:
+            data['context'] = context
+        return self._request(url, data)
+
     def tone(
         self,
         text,
