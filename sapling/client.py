@@ -1,5 +1,6 @@
 import requests
 import uuid
+from collections.abc import Iterable
 
 
 class SaplingError(Exception):
@@ -699,9 +700,12 @@ class SaplingClient:
             - missing: Names of the fields the text did not yield, in request order.
               Finding nothing is a normal, successful response.
         '''
-        # A bare string would silently be split into one-character field names and
-        # None would raise an opaque TypeError from list(); fail loudly instead.
-        if fields is None or isinstance(fields, (str, bytes, dict)):
+        # A bare string would silently be split into one-character field names,
+        # a dict would be reduced to its keys, and a non-iterable (None, an int)
+        # would raise an opaque "'int' object is not iterable" from list().
+        # Fail loudly with a message that names the right shape instead.
+        if (not isinstance(fields, Iterable)
+                or isinstance(fields, (str, bytes, dict))):
             raise TypeError('fields must be a list of field names or '
                             '{name, type, description, required} dicts')
         url = self.url_endpoint + 'extract'
