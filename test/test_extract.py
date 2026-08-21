@@ -185,17 +185,29 @@ def test_extract_custom_hostname_and_pathname():
     assert result == EXTRACT_RESPONSE
 
 
-@pytest.mark.parametrize('bad_fields',
-                         [None, 'invoice_number', b'invoice_number',
-                          {'name': 'invoice_number'}])
+# None / an int / a bool are not iterable at all; a str, bytes or dict is
+# iterable but into the wrong thing (characters, bytes, keys).
+BAD_FIELDS = [None, 42, 3.5, True, 'invoice_number', b'invoice_number',
+              {'name': 'invoice_number'}]
+
+
+@pytest.mark.parametrize('bad_fields', BAD_FIELDS)
 def test_extract_rejects_non_list_fields(client, bad_fields):
     with pytest.raises(TypeError):
         client.extract(TEXT, bad_fields)
 
 
-@pytest.mark.parametrize('bad_fields',
-                         [None, 'invoice_number', b'invoice_number',
-                          {'name': 'invoice_number'}])
+@pytest.mark.parametrize('bad_fields', BAD_FIELDS)
 def test_extract_non_list_fields_message_is_helpful(client, bad_fields):
+    # Not the opaque "'int' object is not iterable" from list().
     with pytest.raises(TypeError, match='fields must be a list'):
         client.extract(TEXT, bad_fields)
+
+
+@responses.activate
+def test_extract_accepts_any_iterable_of_fields(client):
+    # list(fields) already handled tuples; a generator is iterable too and must
+    # not be rejected by the stricter guard.
+    responses.add(responses.POST, BASE + 'extract', json=EXTRACT_RESPONSE, status=200)
+    client.extract(TEXT, (name for name in ['invoice_number', 'total']))
+    assert _last_request_body()['fields'] == ['invoice_number', 'total']
