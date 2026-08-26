@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath('../..'))
 # -- Project information
 
 project = 'Sapling'
-copyright = '2022, Sapling'
+copyright = '2026, Sapling'
 author = 'Sapling Intelligence'
 
 about = {}
