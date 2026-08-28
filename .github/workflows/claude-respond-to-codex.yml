@@ -11,16 +11,16 @@ concurrency:
 jobs:
   claude:
     # This is a public repository: only reviews from the two trusted bots on
-    # PRs authored by trusted repository users may spend Claude credits.
+    # PRs opened from branches in this repository (not forks) may spend Claude
+    # credits. Only accounts with push access can create such branches. We do
+    # not gate on author_association: org members with private membership show
+    # up as CONTRIBUTOR/NONE in webhook payloads, which silently skipped every run.
     if: |
       (
         github.event.review.user.login == 'chatgpt-codex-connector[bot]' ||
         github.event.review.user.login == 'gemini-code-assist[bot]'
       ) &&
-      contains(
-        fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
-        github.event.pull_request.author_association
-      )
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
