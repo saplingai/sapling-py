@@ -10,10 +10,13 @@ concurrency:
 
 jobs:
   review:
+    # Public repo: only an explicit allowlist of maintainers may trigger a paid
+    # Codex run. author_association is not usable here (private org membership
+    # reports as CONTRIBUTOR/NONE in webhook payloads).
     if: |
       github.event.issue.pull_request != null &&
       github.event.comment.body == '/codex-api-review' &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+      contains(fromJSON('["zxie","saplingdev"]'), github.event.comment.user.login)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

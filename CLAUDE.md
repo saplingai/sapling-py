@@ -92,20 +92,24 @@ branch.
 
 ## PR review automation (`.github/`)
 
-- `codex-api-review.yml`: a repo OWNER/MEMBER/COLLABORATOR commenting
+- `codex-api-review.yml`: an allowlisted maintainer commenting `/codex-api-review` on
+  a PR triggers a Codex review, posted as a PR review.
 - `claude-respond-to-codex.yml`: when the Codex or Gemini bot submits a review on a PR
-  from a trusted author, Claude (via `.github/actions/claude-with-api-fallback`)
-  evaluates each finding and posts response.
+  opened from a branch in this repo (not a fork), Claude (via
+  `.github/actions/claude-with-api-fallback`) evaluates each finding and posts a
+  verdict comment. It does not modify code.
 
 Both workflows check out the **trusted default branch** and treat PR contents as
 untrusted input; they read `AGENTS.md` → `CLAUDE.md` from `master`. When editing them,
-keep the `author_association` / bot-login gates, `persist-credentials: false`, and the
-read-only tool allowlist — this is a public repo and those runs spend credits.
+keep the bot-login / not-from-a-fork / login-allowlist gates, `persist-credentials:
+false`, and the read-only tool allowlist — this is a public repo and those runs spend
+credits. Don't gate on `author_association`: org members with private membership are
+reported as `CONTRIBUTOR`/`NONE` in webhook payloads, so such a gate never passes.
 
 ## Public-repo hygiene
 
 - No secrets anywhere: keys come from the caller (`SaplingClient(api_key=...)`);
   examples use `<YOUR_API_KEY>`; tests use `'a' * 32`.
 - Don't commit `build/`, `dist/`, `*.egg-info/`, `docs/build/`, or virtualenvs
-  (`.venv-docs/` is not yet in `.gitignore` — add it if you create one).
+  (`.gitignore` covers `.venv*/` and `env*/`).
 - Commit messages: concise, imperative (`add rephrase endpoint`, `bump version`).
