@@ -22,7 +22,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout pull request merge commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/pull/${{ github.event.issue.number }}/merge
           fetch-depth: 0
@@ -39,7 +39,7 @@ jobs:
 
       - name: Run Codex API review
         id: codex
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.6-sol
@@ -73,7 +73,7 @@ jobs:
           exit 1
 
       - name: Post Codex review
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           CODEX_REVIEW: ${{ steps.codex.outputs.final-message }}
         with:

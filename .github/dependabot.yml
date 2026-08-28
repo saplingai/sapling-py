@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # Keep SHA-pinned actions current (workflows + the composite action).
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/claude-with-api-fallback
+    schedule:
+      interval: weekly
