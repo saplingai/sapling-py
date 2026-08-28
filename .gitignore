@@ -4,3 +4,9 @@ dist/*
 sapling_py.egg-info/*
 env/*
 **.DS_Store
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv*/
+env*/
