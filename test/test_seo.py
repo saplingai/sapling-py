@@ -107,9 +107,10 @@ def test_seo_error_raises_saplingerror_with_body(client):
 
 
 @responses.activate
-@pytest.mark.parametrize('bad_keywords', ['grammar', b'grammar'])
-def test_seo_rejects_single_string_keywords(client, bad_keywords):
-    # A bare string would otherwise be split into one-character keywords.
+@pytest.mark.parametrize('bad_keywords', ['grammar', b'grammar', {'grammar': True}, 42, True])
+def test_seo_rejects_invalid_keywords(client, bad_keywords):
+    # A bare string would be split into characters and a dict reduced to its keys;
+    # non-iterables would raise an opaque TypeError from list().
     with pytest.raises(TypeError):
         client.seo('some text', keywords=bad_keywords)
     assert len(responses.calls) == 0
