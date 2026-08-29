@@ -933,6 +933,9 @@ class SaplingClient:
             'text': text,
         }
         if types is not None:
+            if isinstance(types, (str, bytes)):
+                raise TypeError('types must be a list of entity type names, '
+                                'not a single string')
             data['types'] = list(types)
         if redact is not None:
             data['redact'] = redact
@@ -989,6 +992,9 @@ class SaplingClient:
             'text': text,
         }
         if keywords is not None:
+            if isinstance(keywords, (str, bytes)):
+                raise TypeError('keywords must be a list of keyword strings, '
+                                'not a single string')
             data['keywords'] = list(keywords)
         if suggestions is not None:
             data['suggestions'] = suggestions
@@ -1067,7 +1073,8 @@ class SaplingClient:
         '''
         # A bare string would silently be split into one-character labels and
         # None would raise an opaque TypeError from list(); fail loudly instead.
-        if labels is None or isinstance(labels, (str, bytes, dict)):
+        if (not isinstance(labels, Iterable)
+                or isinstance(labels, (str, bytes, dict))):
             raise TypeError('labels must be a list of label names or '
                             '{name, description} dicts')
         url = self.url_endpoint + 'classify'

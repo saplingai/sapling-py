@@ -194,7 +194,7 @@ def test_classify_custom_hostname_and_pathname():
     assert result == CLASSIFY_RESPONSE
 
 
-@pytest.mark.parametrize('bad_labels', [None, 'billing', b'billing', {'name': 'billing'}])
+@pytest.mark.parametrize('bad_labels', [None, 'billing', b'billing', {'name': 'billing'}, 42, True])
 def test_classify_rejects_non_list_labels(client, bad_labels):
     with pytest.raises(TypeError):
         client.classify('I was charged twice.', bad_labels)

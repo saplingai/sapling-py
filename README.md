@@ -8,7 +8,9 @@ Compare against leading grammar checking tools and APIs like Grammarly (Grammerl
 ## Overview
 
 Sapling is a toolkit for helping developers build language model-powered applications.
-The API provides spelling and grammar checking, autocomplete, tone detection, rephrasing, AI detection, zero-shot text classification, and more.
+The API provides spelling and grammar checking, autocomplete, tone detection, rephrasing, AI detection,
+zero-shot text classification, structured data extraction, PII detection and redaction, content safety
+scoring, SEO analysis, and more.
 
 Key Features:
 - **60% More Corrections**: Outperforms [competing solutions](https://sapling.ai/comparison/api#sapling) at similar accuracy levels using state-of-the-art generative AI models.

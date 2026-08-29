@@ -54,3 +54,12 @@ def test_pii_optional_params_omitted_by_default(client):
     body = _last_request_body()
     assert 'types' not in body
     assert 'redact' not in body
+
+
+@responses.activate
+@pytest.mark.parametrize('bad_types', ['email', b'email'])
+def test_pii_rejects_single_string_types(client, bad_types):
+    # A bare string would otherwise be split into one-character type names.
+    with pytest.raises(TypeError):
+        client.pii('Email jane@example.com', types=bad_types)
+    assert len(responses.calls) == 0
