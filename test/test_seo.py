@@ -104,3 +104,12 @@ def test_seo_error_raises_saplingerror_with_body(client):
     err = exc_info.value
     assert err.status_code == 502
     assert 'Unexpected error generating SEO suggestions.' in str(err)
+
+
+@responses.activate
+@pytest.mark.parametrize('bad_keywords', ['grammar', b'grammar'])
+def test_seo_rejects_single_string_keywords(client, bad_keywords):
+    # A bare string would otherwise be split into one-character keywords.
+    with pytest.raises(TypeError):
+        client.seo('some text', keywords=bad_keywords)
+    assert len(responses.calls) == 0
