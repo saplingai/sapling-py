@@ -869,6 +869,7 @@ class SaplingClient:
         self,
         text,
         threshold=None,
+        spans=None,
     ):
         '''
         Scores the provided text on seven content-safety categories: toxicity,
@@ -879,12 +880,19 @@ class SaplingClient:
         :param threshold: Score at or above which a category is flagged.
             Between 0 and 1 inclusive; the API defaults to 0.5.
         :type threshold: float
+        :param spans: When True, the response also includes the offending
+            passages as spans, each with its text, start/end character offsets
+            into the submitted text, per-passage category scores, and
+            flagged_categories. The API defaults to False.
+        :type spans: bool
         :rtype: dict
         :return:
             - scores: A probability from 0 to 1 for each category.
             - flagged: True if any category scored at or above the threshold.
             - flagged_categories: Categories that scored at or above the threshold.
             - threshold: The threshold that was applied.
+            - spans: Only with spans=True — the offending passages, most
+              severe first, as {text, start, end, scores, flagged_categories}.
         '''
         url = self.url_endpoint + 'safety'
         data = {
@@ -893,6 +901,8 @@ class SaplingClient:
         }
         if threshold is not None:
             data['threshold'] = threshold
+        if spans is not None:
+            data['spans'] = spans
         return self._request(url, data)
 
     def pii(
