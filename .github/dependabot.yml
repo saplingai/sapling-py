@@ -1,5 +1,11 @@
 version: 2
 updates:
+  # Keep the uv lockfile current.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+
   # Keep SHA-pinned actions current (workflows + the composite action).
   - package-ecosystem: github-actions
     directories:
