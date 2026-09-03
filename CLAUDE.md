@@ -17,22 +17,33 @@ deliberately in the same PR).
 | Path | Purpose |
 |------|---------|
 | `sapling/client.py` | `SaplingClient` + `SaplingError`. All HTTP goes through `_request()`. |
-| `sapling/version.py` | Single source of truth for the version (read by `setup.py` and `docs/source/conf.py`). |
+| `sapling/version.py` | Single source of truth for the version (read by `pyproject.toml` and `docs/source/conf.py`). |
+| `pyproject.toml` / `uv.lock` | Standard package metadata and reproducible uv environment. |
 | `sapling/__init__.py` | Public exports: `SaplingClient`, `SaplingError`, `__version__`. |
 | `test/test_client.py` | pytest suite; HTTP mocked with `responses`, no network. |
 | `docs/source/` | Sphinx + MyST docs built by Read the Docs (https://sapling.readthedocs.io/). `api.md` autodocs `SaplingClient`. |
 | `docs/requirements.txt` | Fully pinned docs build deps (Dependabot watches this file). |
-| `README.md` | Doubles as the PyPI long description (`setup.py` reads it). |
+| `README.md` | Doubles as the PyPI long description (`pyproject.toml` references it). |
 | `.github/workflows/` | AI PR-review automation only; no test CI yet. |
 
 ## Commands
 
 ```bash
+# uv workflow
+uv sync --extra test
+uv run --extra test python -m pytest test/ -q
+
+# pip workflow
 python -m pip install -e '.[test]'      # editable install + pytest + responses
 python -m pytest test/ -q               # ~0.1s, 17 tests, no network
 
-# Docs — mirror the Read the Docs flow (fail_on_warning is on, so use -W)
+# Docs with pip — mirror the Read the Docs flow (fail_on_warning is on, so use -W)
 python -m venv .venv-docs && .venv-docs/bin/pip install -r docs/requirements.txt -e .
+.venv-docs/bin/sphinx-build -W -b html docs/source docs/build/html
+
+# Docs with uv
+uv venv .venv-docs
+uv pip install --python .venv-docs/bin/python -r docs/requirements.txt -e .
 .venv-docs/bin/sphinx-build -W -b html docs/source docs/build/html
 ```
 
@@ -79,12 +90,19 @@ Releases are currently manual.
 2. From a clean checkout of the merged commit:
    ```bash
    rm -rf build dist *.egg-info          # stale artifacts are gitignored but still present locally
+
+   # uv
+   uv build && uvx twine check dist/*
+   uv publish                            # needs a PyPI token; run from an interactive terminal
+
+   # pip / PyPA build tooling
    python -m pip install build twine
    python -m build && python -m twine check dist/*
    python -m twine upload dist/*         # needs PyPI credentials + 2FA; run from an interactive terminal
    ```
-3. Verify: `python -m pip index versions sapling-py`, then a scratch
-   `pip install sapling-py==<version>` and `from sapling import SaplingClient`.
+3. Verify with either `python -m pip index versions sapling-py` or
+   `uv run --with sapling-py==<version> --no-project -- python -c
+   "from sapling import SaplingClient"`.
 
 Check `python -m pip index versions sapling-py` before bumping — `version.py` should
 match the latest published release at rest, and be ahead of it only on an unreleased

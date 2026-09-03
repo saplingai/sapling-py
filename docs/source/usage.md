@@ -5,14 +5,18 @@
 Installation
 --------
 
-Install the `sapling-py` package with [pip](https://pip.pypa.io/en/stable/installation/).
-Here's the [package link](https://pypi.org/project/sapling-py/).
+Install the `sapling-py` package from [PyPI](https://pypi.org/project/sapling-py/)
+with [pip](https://pip.pypa.io/en/stable/installation/):
 
-
-```
+```sh
 python -m pip install sapling-py
 ```
 
+Or add it to a [uv](https://docs.astral.sh/uv/) project:
+
+```sh
+uv add sapling-py
+```
 
 (quickstart)=
 Quickstart
