@@ -718,6 +718,63 @@ class SaplingClient:
             data['context'] = context
         return self._request(url, data)
 
+    def translate(
+        self,
+        text,
+        target_lang,
+        source_lang=None,
+        formality=None,
+    ):
+        '''
+        Translates text into a target language with an LLM, preserving line
+        breaks, markup and placeholders in place. The response reports the
+        language the text was actually written in (detected, not assumed from
+        the hint).
+
+        Example::
+
+            client.translate(
+                'Hello world.\\nSee you at 5pm.',
+                target_lang='fr',
+            )
+            # {'translation': 'Bonjour le monde.\\nÀ 17h.',
+            #  'source_lang': 'en', 'source_lang_name': 'English',
+            #  'target_lang': 'fr', 'target_lang_name': 'French'}
+
+        :param text: Text to translate, up to 5,000 characters. Markup and
+            whitespace are preserved, not stripped.
+        :type text: str
+        :param target_lang: Language to translate into: an ISO 639 code
+            (``'fr'``, ``'zh-TW'``) or an English language name
+            (``'French'``). Region variants ``zh-CN``/``zh-TW``/``zh-HK``,
+            ``pt-BR``/``pt-PT``, ``en-GB``/``en-US``, ``fr-CA`` and ``es-419``
+            are supported as targets.
+        :type target_lang: str
+        :param source_lang: Optional hint for the source language, same forms
+            as ``target_lang``. The text itself wins if they disagree.
+        :type source_lang: str
+        :param formality: Optional register: ``'formal'`` (vous/Sie/usted) or
+            ``'informal'`` (tu/du/tú). Omit for the model default.
+        :type formality: str
+        :rtype: dict
+        :return:
+            - translation: The translated text, structure preserved.
+            - source_lang / source_lang_name: The detected source language
+              (``'und'`` and ``None`` when undetermined).
+            - target_lang / target_lang_name: The normalized target.
+        '''
+        url = self.url_endpoint + 'translate'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'target_lang': target_lang,
+        }
+        if source_lang is not None:
+            data['source_lang'] = source_lang
+        if formality is not None:
+            data['formality'] = formality
+        return self._request(url, data)
+
     def tone(
         self,
         text,
