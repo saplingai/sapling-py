@@ -211,3 +211,27 @@ def test_extract_accepts_any_iterable_of_fields(client):
     responses.add(responses.POST, BASE + 'extract', json=EXTRACT_RESPONSE, status=200)
     client.extract(TEXT, (name for name in ['invoice_number', 'total']))
     assert _last_request_body()['fields'] == ['invoice_number', 'total']
+
+
+@responses.activate
+def test_extract_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-395): sent as `texts`, no `text`
+    # key, and the {'results': [...]} body comes back untouched.
+    batch_response = {'results': [EXTRACT_RESPONSE, EXTRACT_RESPONSE]}
+    responses.add(responses.POST, BASE + 'extract', json=batch_response, status=200)
+    result = client.extract([TEXT, 'Invoice INV-2077 for Globex.'], FIELDS)
+    assert result == batch_response
+    body = _last_request_body()
+    assert body['texts'] == [TEXT, 'Invoice INV-2077 for Globex.']
+    assert 'text' not in body
+    assert body['fields'] == FIELDS
+
+
+@responses.activate
+def test_extract_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'extract',
+                  json={'results': [EXTRACT_RESPONSE]}, status=200)
+    client.extract((TEXT,), FIELDS)
+    body = _last_request_body()
+    assert body['texts'] == [TEXT]
+    assert 'text' not in body
