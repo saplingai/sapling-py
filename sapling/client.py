@@ -672,8 +672,12 @@ class SaplingClient:
             #  'missing': ['purchase_order']}
 
         :param text: Document to extract from, plain text or HTML (tags are
-            stripped), up to 10,000 characters.
-        :type text: str
+            stripped), up to 10,000 characters. Pass a list or tuple of 1-10
+            strings to extract from a batch in one request (sent as the API's
+            ``texts`` parameter; combined length up to 10,000 characters). A batch
+            response is ``{'results': [...]}`` with one single-response-shaped
+            dict per input, in order.
+        :type text: str | list[str]
         :param fields: 1-20 fields to extract. Each entry is either a field name
             (str) or a dict ``{'name': str, 'type': str, 'description': str,
             'required': bool}`` where everything but ``name`` is optional. Names are
@@ -711,9 +715,14 @@ class SaplingClient:
         url = self.url_endpoint + 'extract'
         data = {
             'key': self.api_key,
-            'text': text,
             'fields': list(fields),
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same fields applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
         if context is not None:
             data['context'] = context
         return self._request(url, data)
@@ -1047,8 +1056,12 @@ class SaplingClient:
             #  'multi_label': False}
 
         :param text: Text to classify, plain text or HTML (tags are stripped), up to
-            10,000 characters.
-        :type text: str
+            10,000 characters. Pass a list or tuple of 1-10 strings to classify a
+            batch in one request (sent as the API's ``texts`` parameter; combined
+            length up to 10,000 characters). A batch response is
+            ``{'results': [...]}`` with one single-response-shaped dict per input,
+            in order.
+        :type text: str | list[str]
         :param labels: 2-20 candidate labels. Each entry is either a label name (str) or
             a dict ``{'name': str, 'description': str}`` where ``description`` is
             optional. Names are up to 50 characters and must be unique
@@ -1090,9 +1103,14 @@ class SaplingClient:
         url = self.url_endpoint + 'classify'
         data = {
             'key': self.api_key,
-            'text': text,
             'labels': list(labels),
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same labels applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
         if multi_label is not None:
             data['multi_label'] = multi_label
         if threshold is not None:
