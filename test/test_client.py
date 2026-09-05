@@ -169,6 +169,31 @@ def test_langdetect_options(client):
 
 
 @responses.activate
+def test_langdetect_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-397): sent as `texts`, no `text`
+    # key, and the {'results': [...]} body comes back untouched.
+    batch_response = {'results': [
+        {'lang': 'en', 'name': 'English', 'conf': 0.99, 'candidates': []},
+        {'lang': 'es', 'name': 'Spanish', 'conf': 0.97, 'candidates': []},
+    ]}
+    responses.add(responses.POST, BASE + 'langdetect', json=batch_response, status=200)
+    result = client.langdetect(['Hello there.', 'Hola.'], top_k=1)
+    assert result == batch_response
+    assert _last_request_body() == {'key': API_KEY, 'texts': ['Hello there.', 'Hola.'],
+                                    'top_k': 1}
+
+
+@responses.activate
+def test_langdetect_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'langdetect',
+                  json={'results': [{'lang': 'en'}]}, status=200)
+    client.langdetect(('Hello there.',))
+    body = _last_request_body()
+    assert body['texts'] == ['Hello there.']
+    assert 'text' not in body
+
+
+@responses.activate
 def test_hostname_and_pathname_override():
     client = SaplingClient(api_key=API_KEY, hostname='http://localhost:5000', pathname='/api/v1/')
     responses.add(responses.POST, 'http://localhost:5000/api/v1/edits', json={'edits': []}, status=200)
