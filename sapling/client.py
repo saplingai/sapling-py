@@ -827,7 +827,11 @@ class SaplingClient:
         candidates and a per-segment breakdown for mixed-language text.
 
         :param text: Text to identify the language for (up to 20,000 characters).
-        :type text: str
+            Pass a list or tuple of 1-10 strings to detect a batch in one
+            request (sent as the API's ``texts`` parameter; combined length up
+            to 20,000 characters). A batch response is ``{'results': [...]}``
+            with one single-response-shaped dict per input, in order.
+        :type text: str | list[str]
         :param top_k: Number of language candidates to return, 1-10. Defaults to 3 server-side.
         :type top_k: int
         :param segments: If true, also detect the language of each line/sentence
@@ -845,8 +849,13 @@ class SaplingClient:
         url = self.url_endpoint + 'langdetect'
         data = {
             'key': self.api_key,
-            'text': text,
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same options applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
         if top_k is not None:
             data['top_k'] = top_k
         if segments is not None:
@@ -884,8 +893,12 @@ class SaplingClient:
         Scores the provided text on seven content-safety categories: toxicity,
         profanity, harassment, hate_speech, self_harm, sexual, and violence.
 
-        :param text: Text to score, up to 20,000 characters.
-        :type text: str
+        :param text: Text to score, up to 20,000 characters. Pass a list or
+            tuple of 1-10 strings to score a batch in one request (sent as the
+            API's ``texts`` parameter; combined length up to 20,000
+            characters). A batch response is ``{'results': [...]}`` with one
+            single-response-shaped dict per input, in order.
+        :type text: str | list[str]
         :param threshold: Score at or above which a category is flagged.
             Between 0 and 1 inclusive; the API defaults to 0.5.
         :type threshold: float
@@ -906,8 +919,13 @@ class SaplingClient:
         url = self.url_endpoint + 'safety'
         data = {
             'key': self.api_key,
-            'text': text,
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same options applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
         if threshold is not None:
             data['threshold'] = threshold
         if spans is not None:
