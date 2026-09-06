@@ -751,8 +751,13 @@ class SaplingClient:
             #  'target_lang': 'fr', 'target_lang_name': 'French'}
 
         :param text: Text to translate, up to 5,000 characters. Markup and
-            whitespace are preserved, not stripped.
-        :type text: str
+            whitespace are preserved, not stripped. Pass a list or tuple of
+            1-10 strings to translate a batch in one request (sent as the
+            API's ``texts`` parameter; combined length up to 5,000
+            characters, same target/source/formality applied to every item).
+            A batch response is ``{'results': [...]}`` with one
+            single-response-shaped dict per input, in order.
+        :type text: str | list[str]
         :param target_lang: Language to translate into: an ISO 639 code
             (``'fr'``, ``'zh-TW'``) or an English language name
             (``'French'``). Region variants ``zh-CN``/``zh-TW``/``zh-HK``,
@@ -775,9 +780,14 @@ class SaplingClient:
         url = self.url_endpoint + 'translate'
         data = {
             'key': self.api_key,
-            'text': text,
             'target_lang': target_lang,
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same options applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
         if source_lang is not None:
             data['source_lang'] = source_lang
         if formality is not None:
