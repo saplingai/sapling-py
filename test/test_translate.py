@@ -79,3 +79,31 @@ def test_translate_http_error_raises_sapling_error(client):
                   json={'msg': 'Unknown language: "Klingon".'}, status=400)
     with pytest.raises(SaplingError):
         client.translate(TEXT, target_lang='Klingon')
+
+
+@responses.activate
+def test_translate_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-398): sent as `texts`, no `text`
+    # key, and the {'results': [...]} body comes back untouched.
+    batch_response = {'results': [TRANSLATE_RESPONSE,
+                                  dict(TRANSLATE_RESPONSE,
+                                       translation='À demain.')]}
+    responses.add(responses.POST, BASE + 'translate',
+                  json=batch_response, status=200)
+    result = client.translate(['Hello world.', 'See you tomorrow.'],
+                              target_lang='fr', formality='formal')
+    assert result == batch_response
+    body = _last_request_body()
+    assert body == {'key': API_KEY,
+                    'texts': ['Hello world.', 'See you tomorrow.'],
+                    'target_lang': 'fr', 'formality': 'formal'}
+
+
+@responses.activate
+def test_translate_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'translate',
+                  json={'results': [TRANSLATE_RESPONSE]}, status=200)
+    client.translate(('Hello world.',), target_lang='fr')
+    body = _last_request_body()
+    assert body['texts'] == ['Hello world.']
+    assert 'text' not in body
