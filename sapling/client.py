@@ -615,21 +615,55 @@ class SaplingClient:
     def summarize(
         self,
         text,
+        length=None,
     ):
         '''
-        Summarizes a longer document into a shorter, more digestible one.
+        Summarizes a longer document, webpage or email thread into a prose
+        summary plus key points.
 
-        :param text: Input document to summarize.
-        :type text: str
+        Example::
+
+            client.summarize(
+                'Hi, I was charged twice for my order this month. ...',
+                length='short',
+            )
+            # {'result': 'The customer was double-charged and wants a refund.',
+            #  'summary': 'The customer was double-charged and wants a refund.',
+            #  'key_points': ['Charged twice for one order.',
+            #                 'Requests a refund of the duplicate.'],
+            #  'length': 'short'}
+
+        :param text: Input document to summarize, plain text or HTML (tags
+            are stripped), up to 20,000 characters. Pass a list or tuple of
+            1-10 strings to summarize a batch in one request (sent as the
+            API's ``texts`` parameter; combined length up to 20,000
+            characters, same ``length`` option applied to every item). A
+            batch response is ``{'results': [...]}`` with one
+            single-response-shaped dict per input, in order.
+        :type text: str | list[str]
+        :param length: Optional summary length: ``'short'``, ``'medium'``
+            (the default) or ``'long'``.
+        :type length: str
         :rtype: dict
         :return:
-            - result: The summarized text.
+            - summary: The prose summary.
+            - result: Mirrors ``summary`` (the endpoint's original response
+              key, kept for backward compatibility).
+            - key_points: List of key-point strings.
+            - length: The length option the summary was generated with.
         '''
         url = self.url_endpoint + 'summarize'
         data = {
             'key': self.api_key,
-            'text': text,
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same options applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
+        if length is not None:
+            data['length'] = length
         return self._request(url, data)
 
     def extract(
