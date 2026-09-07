@@ -218,3 +218,44 @@ def test_quality_options(client):
     assert result == payload
     assert _last_request_body() == {'key': API_KEY, 'text': 'Hello',
                                     'sentence_scores': True, 'rubric': True}
+
+
+@responses.activate
+def test_summarize_length_sent_only_when_given(client):
+    payload = {'result': 'Short.', 'summary': 'Short.', 'key_points': ['One.'],
+               'length': 'short'}
+    responses.add(responses.POST, BASE + 'summarize', json=payload, status=200)
+    result = client.summarize('A long document.', length='short')
+    assert result == payload
+    assert _last_request_body() == {'key': API_KEY, 'text': 'A long document.',
+                                    'length': 'short'}
+
+    responses.add(responses.POST, BASE + 'summarize', json=payload, status=200)
+    client.summarize('A long document.')
+    assert 'length' not in _last_request_body()
+
+
+@responses.activate
+def test_summarize_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-399): sent as `texts`, no `text`
+    # key, and the {'results': [...]} body comes back untouched.
+    batch_response = {'results': [
+        {'result': 'One.', 'summary': 'One.', 'key_points': ['A.'], 'length': 'medium'},
+        {'result': 'Two.', 'summary': 'Two.', 'key_points': ['B.'], 'length': 'medium'},
+    ]}
+    responses.add(responses.POST, BASE + 'summarize', json=batch_response, status=200)
+    result = client.summarize(['First document.', 'Second document.'])
+    assert result == batch_response
+    assert _last_request_body() == {'key': API_KEY,
+                                    'texts': ['First document.', 'Second document.']}
+
+
+@responses.activate
+def test_summarize_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'summarize',
+                  json={'results': [{'result': 'One.'}]}, status=200)
+    client.summarize(('First document.',), length='long')
+    body = _last_request_body()
+    assert body['texts'] == ['First document.']
+    assert body['length'] == 'long'
+    assert 'text' not in body
