@@ -889,8 +889,13 @@ class SaplingClient:
 
         :param text: Text to compute a quality score for. The base score is computed
             on the leading ~4,000 characters; the rubric evaluates the whole text
-            (up to 20,000 characters).
-        :type text: str
+            (up to 20,000 characters). Pass a list or tuple of 1-10 strings to
+            score a batch in one request (sent as the API's ``texts`` parameter;
+            the same options apply to every item, and with ``rubric`` the
+            combined length is capped at 20,000 characters). A batch response is
+            ``{'results': [...]}`` with one single-response-shaped dict per
+            input, in order.
+        :type text: str | list[str]
         :param sentence_scores: If true, also return a 1-5 score for each sentence
             under `sentences`.
         :type sentence_scores: bool
@@ -909,8 +914,13 @@ class SaplingClient:
         url = self.url_endpoint + 'quality'
         data = {
             'key': self.api_key,
-            'text': text,
         }
+        # A list/tuple of texts is the batch form: one request, one result per
+        # item ({'results': [...]}), same options applied to every item.
+        if isinstance(text, (list, tuple)):
+            data['texts'] = list(text)
+        else:
+            data['text'] = text
         if sentence_scores is not None:
             data['sentence_scores'] = sentence_scores
         if rubric is not None:
