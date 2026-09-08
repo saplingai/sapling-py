@@ -72,6 +72,19 @@ Get a production key by following [this documentation](https://sapling.ai/docs/a
 
 Here's some more information on [request options and response structure](https://sapling.ai/docs/api/edits-overview).
 
+## Batch requests
+
+The analysis endpoints — `classify`, `extract`, `safety`, `langdetect`,
+`translate`, `summarize` and `quality` — also accept a list of 1-10 texts in
+place of a single string. The batch is sent as one request (the same options
+apply to every item) and returns `{'results': [...]}` with one
+single-response-shaped dict per input, in order:
+
+```python
+scores = client.quality(['First draft.', 'Second draft.'], sentence_scores=True)
+langs = client.langdetect(['Bonjour le monde', 'Hello world'])
+```
+
 ## License
 
 Copyright 2024--present Sapling Intelligence, Inc.
