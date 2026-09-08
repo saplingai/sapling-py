@@ -221,6 +221,34 @@ def test_quality_options(client):
 
 
 @responses.activate
+def test_quality_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-400): sent as `texts`, no `text`
+    # key, the same options applied to every item, and the {'results': [...]}
+    # body comes back untouched.
+    batch_response = {'results': [
+        {'score': 4.1},
+        {'score': 2.3},
+    ]}
+    responses.add(responses.POST, BASE + 'quality', json=batch_response, status=200)
+    result = client.quality(['First document.', 'Second document.'],
+                            sentence_scores=True)
+    assert result == batch_response
+    assert _last_request_body() == {'key': API_KEY,
+                                    'texts': ['First document.', 'Second document.'],
+                                    'sentence_scores': True}
+
+
+@responses.activate
+def test_quality_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'quality',
+                  json={'results': [{'score': 3.0}]}, status=200)
+    client.quality(('First document.',))
+    body = _last_request_body()
+    assert body['texts'] == ['First document.']
+    assert 'text' not in body
+
+
+@responses.activate
 def test_summarize_length_sent_only_when_given(client):
     payload = {'result': 'Short.', 'summary': 'Short.', 'key_points': ['One.'],
                'length': 'short'}
