@@ -287,3 +287,31 @@ def test_summarize_batch_tuple_sent_as_list(client):
     assert body['texts'] == ['First document.']
     assert body['length'] == 'long'
     assert 'text' not in body
+
+
+@responses.activate
+def test_aidetect_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-403): sent as `texts`, no `text`
+    # key, and the {'results': [...]} body comes back untouched.
+    batch_response = {'results': [
+        {'score': 0.91, 'text': 'Almost certainly generated.'},
+        {'score': 0.08, 'text': 'Plainly human prose.'},
+    ]}
+    responses.add(responses.POST, BASE + 'aidetect', json=batch_response, status=200)
+    result = client.aidetect(['Almost certainly generated.', 'Plainly human prose.'],
+                             sent_scores=False)
+    assert result == batch_response
+    assert _last_request_body() == {'key': API_KEY,
+                                    'texts': ['Almost certainly generated.',
+                                              'Plainly human prose.'],
+                                    'sent_scores': False}
+
+
+@responses.activate
+def test_aidetect_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'aidetect',
+                  json={'results': [{'score': 0.5}]}, status=200)
+    client.aidetect(('One draft.',))
+    body = _last_request_body()
+    assert body['texts'] == ['One draft.']
+    assert 'text' not in body
