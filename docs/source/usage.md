@@ -58,7 +58,8 @@ Batch requests
 --------------
 
 The analysis endpoints — `classify`, `extract`, `safety`, `langdetect`,
-`translate`, `summarize` and `quality` — also accept a list of 1-10 texts in
+`translate`, `summarize`, `quality` and `aidetect` — also accept a list of
+1-10 texts in
 place of a single string. The batch is sent as one request (the same options
 apply to every item) and returns `{'results': [...]}` with one
 single-response-shaped dict per input, in order:
