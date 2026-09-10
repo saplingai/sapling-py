@@ -198,3 +198,26 @@ def test_classify_custom_hostname_and_pathname():
 def test_classify_rejects_non_list_labels(client, bad_labels):
     with pytest.raises(TypeError):
         client.classify('I was charged twice.', bad_labels)
+
+
+@responses.activate
+def test_classify_batch_list_sent_as_texts(client):
+    # A list of texts is the batch form (SAP-395): sent as `texts`, no `text`
+    # key, and the {'results': [...]} body comes back untouched.
+    batch_response = {'results': [CLASSIFY_RESPONSE, MULTI_LABEL_RESPONSE]}
+    responses.add(responses.POST, BASE + 'classify', json=batch_response, status=200)
+    result = client.classify(['first ticket', 'second ticket'], LABELS)
+    assert result == batch_response
+    body = _last_request_body()
+    assert body == {'key': API_KEY, 'texts': ['first ticket', 'second ticket'],
+                    'labels': LABELS}
+
+
+@responses.activate
+def test_classify_batch_tuple_sent_as_list(client):
+    responses.add(responses.POST, BASE + 'classify',
+                  json={'results': [CLASSIFY_RESPONSE]}, status=200)
+    client.classify(('only ticket',), LABELS)
+    body = _last_request_body()
+    assert body['texts'] == ['only ticket']
+    assert 'text' not in body
