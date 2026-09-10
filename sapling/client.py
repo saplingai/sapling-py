@@ -461,6 +461,52 @@ class SaplingClient:
             data['sent_scores'] = sent_scores
         return self._request(url, data)
 
+    def humanize(
+        self,
+        text,
+        threshold=None,
+    ):
+        '''
+        Rewrites the AI-sounding sentences of a text so it reads as naturally
+        human-written, preserving meaning, tone and document structure. The
+        counterpart to :meth:`aidetect`: the detector's sentence scores pick
+        the sentences at or above ``threshold``, an LLM rewrites just those,
+        and the rewrites are spliced back between the untouched sentences.
+
+        Example::
+
+            client.humanize('Furthermore, it is important to note that our '
+                            'solution leverages cutting-edge technology.')
+            # {'text': '...rewritten...', 'original_text': '...',
+            #  'ai_score': 0.74,
+            #  'sentences': [{'original': '...', 'humanized': '...',
+            #                 'ai_score': 0.91, 'was_rephrased': True}]}
+
+        :param text: Text to humanize, up to 5,000 characters. Whitespace and
+            line structure between sentences are preserved in the output.
+        :type text: str
+        :param threshold: Sentences with an AI score at or above this value
+            (between 0 and 1) are rewritten. Omit for the API default (0.5);
+            higher values rewrite only strongly-flagged sentences.
+        :type threshold: float
+        :rtype: dict
+        :return:
+            - text: The humanized text, structure preserved.
+            - original_text: The (normalized) input the pipeline ran on.
+            - ai_score: The detector's overall score for the ORIGINAL text
+              (0 = human-sounding, 1 = AI-sounding).
+            - sentences: One ``{original, humanized, ai_score,
+              was_rephrased}`` dict per detected sentence, in order.
+        '''
+        url = f'{self.url_endpoint}humanize'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        if threshold is not None:
+            data['threshold'] = threshold
+        return self._request(url, data)
+
     def chunk_text(
         self,
         text,
