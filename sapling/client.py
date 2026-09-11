@@ -507,6 +507,70 @@ class SaplingClient:
             data['threshold'] = threshold
         return self._request(url, data)
 
+    def styleguide(
+        self,
+        text,
+        rules,
+    ):
+        '''
+        Checks a text for compliance with style rules you supply (house style,
+        brand voice, editorial guidelines) and returns the violations, each
+        with the verbatim offending passage, its offsets, a brief note and a
+        compliant rewrite suggestion. Only the listed rules are enforced.
+
+        Example::
+
+            client.styleguide(
+                'Our synergy-driven solution was leveraged by the team!!',
+                rules=[
+                    'no jargon',
+                    {'name': 'no exclamation marks',
+                     'description': 'Never use exclamation marks.'},
+                ],
+            )
+            # {'violations': [
+            #      {'rule': 'no jargon', 'text': 'synergy-driven solution',
+            #       'start': 4, 'end': 27, 'note': 'Corporate buzzword.',
+            #       'suggestion': 'effective product'},
+            #      ...],
+            #  'rules': ['no jargon', 'no exclamation marks'],
+            #  'compliant': False}
+
+        :param text: Text to check, up to 10,000 characters. Checked exactly as
+            submitted (markup is NOT stripped — style rules may govern
+            formatting), so ``start``/``end`` always index this string.
+        :type text: str
+        :param rules: 1-20 style rules. Each entry is either a rule name (str) or
+            a dict ``{'name': str, 'description': str}`` where ``description`` is
+            optional. Names are up to 80 characters and must be unique
+            (case-insensitive); descriptions are up to 400 characters and carry
+            the nuance the model follows.
+        :type rules: list[str | dict]
+        :raises TypeError: If ``rules`` is None, a single string or a dict rather
+            than a list/tuple of rules.
+        :rtype: dict
+        :return:
+            - violations: One ``{rule, text, start, end, note, suggestion}`` dict
+              per violation, most important first. ``text`` is the offending
+              passage; ``start``/``end`` are its offsets in the submitted text
+              (``None`` when the passage cannot be located).
+            - rules: The checked rule names, normalized.
+            - compliant: True when no violations were found.
+        '''
+        # A bare string would silently be split into one-character rules and
+        # None would raise an opaque TypeError from list(); fail loudly instead.
+        if (not isinstance(rules, Iterable)
+                or isinstance(rules, (str, bytes, dict))):
+            raise TypeError('rules must be a list of rule names or '
+                            '{name, description} dicts')
+        url = f'{self.url_endpoint}styleguide'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'rules': list(rules),
+        }
+        return self._request(url, data)
+
     def chunk_text(
         self,
         text,
