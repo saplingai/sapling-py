@@ -571,6 +571,84 @@ class SaplingClient:
         }
         return self._request(url, data)
 
+    def simplify(
+        self,
+        text,
+        reading_level=None,
+        preserve_terms=None,
+        lang=None,
+    ):
+        '''
+        Rewrites a text in plain language at a target reading level, keeping
+        all of its content, structure and language — nothing is summarized or
+        dropped. The response includes a deterministic before/after
+        readability block (Flesch-Kincaid grade and reading ease) when the
+        text's language supports it, so the improvement is verifiable.
+
+        Example::
+
+            client.simplify(
+                'The party of the first part shall remit payment within '
+                'thirty (30) days of receipt of the invoice.',
+                reading_level='plain',
+                preserve_terms=['invoice'],
+            )
+            # {'simplified': 'You must pay within 30 days of getting '
+            #                'the invoice.',
+            #  'reading_level': 'plain', 'lang': 'en',
+            #  'readability': {'before': {'grade': 12.3, 'ease': 42.1},
+            #                  'after': {'grade': 5.8, 'ease': 78.4}}}
+
+        :param text: Text to simplify, up to 5,000 characters. Sent to the
+            model as submitted — markup and line structure are preserved, not
+            stripped.
+        :type text: str
+        :param reading_level: Target audience: ``'plain'`` (plain-language
+            style for a general audience, the API default), ``'elementary'``
+            (~US grade 3-5), ``'middle_school'`` (~grade 6-8) or
+            ``'high_school'`` (~grade 9-10).
+        :type reading_level: str
+        :param preserve_terms: Up to 20 terms (each up to 100 characters) the
+            rewrite must keep exactly as written — product names, defined
+            legal terms. A rewrite that drops one is refused server-side
+            rather than returned.
+        :type preserve_terms: list[str]
+        :param lang: ISO 639-1 code used to pick the readability formula for
+            the before/after scores. Omit for auto-detection (falls back to
+            ``'en'``). The rewrite itself always stays in the text's own
+            language.
+        :type lang: str
+        :raises TypeError: If ``preserve_terms`` is a single string rather
+            than a list/tuple of terms.
+        :rtype: dict
+        :return:
+            - simplified: The rewritten text, structure preserved.
+            - reading_level: The reading level that was applied.
+            - lang: The language the readability scores were computed for
+              (detected when not supplied).
+            - readability: ``{'before': {'grade', 'ease'}, 'after': {'grade',
+              'ease'}}`` Flesch-Kincaid scores, present when the language
+              supports readability scoring.
+        '''
+        # A bare string would silently be split into one-character terms;
+        # fail loudly instead (same guard as styleguide/extract).
+        if preserve_terms is not None and (
+                not isinstance(preserve_terms, Iterable)
+                or isinstance(preserve_terms, (str, bytes, dict))):
+            raise TypeError('preserve_terms must be a list of strings')
+        url = f'{self.url_endpoint}simplify'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        if reading_level is not None:
+            data['reading_level'] = reading_level
+        if preserve_terms is not None:
+            data['preserve_terms'] = list(preserve_terms)
+        if lang is not None:
+            data['lang'] = lang
+        return self._request(url, data)
+
     def chunk_text(
         self,
         text,
