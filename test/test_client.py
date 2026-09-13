@@ -143,6 +143,10 @@ def test_rephrase_sends_expected_params(client):
             'scores': {'toxicity': 0.9}, 'flagged': True,
             'flagged_categories': ['toxicity'], 'threshold': 0.5,
         }),
+        ('promptguard', 'promptguard', {
+            'scores': {'prompt_injection': 0.97, 'jailbreak': 0.35}, 'flagged': True,
+            'flagged_categories': ['prompt_injection'], 'threshold': 0.5,
+        }),
     ],
 )
 @responses.activate
