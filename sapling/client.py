@@ -1241,6 +1241,46 @@ class SaplingClient:
             data['spans'] = spans
         return self._request(url, data)
 
+    def promptguard(
+        self,
+        text,
+        threshold=None,
+    ):
+        '''
+        Scores untrusted content for attacks on an AI system before your
+        application processes it: prompt_injection (instructions embedded in
+        data — emails, web pages, retrieved documents, tool outputs — that try
+        to hijack the AI processing it) and jailbreak (attempts to make an
+        assistant bypass its rules — unrestricted personas, fake developer
+        modes, system-prompt extraction).
+
+        Send the content exactly as your pipeline would ingest it: markup is
+        scored, not stripped (injections routinely hide in tags, comments, and
+        attributes). Content that merely discusses or quotes such attacks
+        scores lower than content performing them.
+
+        :param text: The untrusted content to score, up to 20,000 characters.
+        :type text: str
+        :param threshold: Score at or above which a category is flagged.
+            Between 0 and 1 inclusive; the API defaults to 0.5.
+        :type threshold: float
+        :rtype: dict
+        :return:
+            - scores: A probability from 0 to 1 for each category
+              (prompt_injection, jailbreak).
+            - flagged: True if any category scored at or above the threshold.
+            - flagged_categories: Categories that scored at or above the threshold.
+            - threshold: The threshold that was applied.
+        '''
+        url = self.url_endpoint + 'promptguard'
+        data = {
+            'key': self.api_key,
+            'text': text,
+        }
+        if threshold is not None:
+            data['threshold'] = threshold
+        return self._request(url, data)
+
     def pii(
         self,
         text,
