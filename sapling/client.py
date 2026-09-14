@@ -1281,6 +1281,60 @@ class SaplingClient:
             data['threshold'] = threshold
         return self._request(url, data)
 
+    def factcheck(
+        self,
+        text,
+        claims,
+        context=None,
+    ):
+        '''
+        Verifies claims against a source document you supply — the grounding
+        check for RAG and agent pipelines: does a generated answer, a
+        summary's sentences, or a chatbot reply actually follow from the
+        retrieved document? Claims are judged only against the source, never
+        against outside knowledge.
+
+        Each verdict comes with verbatim evidence quotes from the source:
+        a supported or contradicted verdict always carries at least one quote
+        the API verified occurs in the source, so you can locate and
+        highlight the passage. If the API normalized the submitted text
+        (stripped HTML, collapsed whitespace), the response also carries a
+        ``source`` field — the normalized text the quotes index; otherwise
+        the quotes index the submitted text as-is.
+
+        :param text: The source document to verify the claims against, up to
+            20,000 characters. Plain text or HTML (tags are handled
+            server-side).
+        :type text: str
+        :param claims: The claims to verify: 1 to 10 statements, each up to
+            1,000 characters — e.g. the sentences of a generated answer.
+        :type claims: list[str]
+        :param context: Optional guidance, up to 500 characters: what the
+            source is (e.g. "a product FAQ page") and how to judge
+            borderline cases.
+        :type context: str
+        :rtype: dict
+        :return:
+            - claims: One entry per submitted claim, in order, each with:
+              claim, verdict (``supported`` — the source states or entails
+              it, ``contradicted`` — the source is incompatible with it, or
+              ``unsupported`` — the source does not say), confidence (0 to
+              1), evidence (verbatim source quotes), and a one-sentence
+              rationale.
+            - all_supported: True if every claim's verdict is ``supported``.
+            - source: Only when the submitted text was normalized — the
+              normalized source the evidence quotes are verbatim spans of.
+        '''
+        url = self.url_endpoint + 'factcheck'
+        data = {
+            'key': self.api_key,
+            'text': text,
+            'claims': claims,
+        }
+        if context is not None:
+            data['context'] = context
+        return self._request(url, data)
+
     def pii(
         self,
         text,
