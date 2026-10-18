@@ -84,10 +84,15 @@ char lines, snake_case, stdlib → third-party → local import groups.
 
 ## Release (PyPI)
 
-Releases are currently manual.
+Releases are automatic: `.github/workflows/release.yml` runs the tests on every PR
+and push, and when a push to `master` leaves `sapling/version.py` at a version PyPI
+doesn't have, it builds, publishes via PyPI trusted publishing (no token; GitHub
+environment `pypi`), tags the commit `v<version>`, and smoke-installs it. So:
+**bumping `version.py` in a PR is the release** — merge it and watch the run.
+Merging without a bump only tests. Read the Docs rebuilds automatically.
 
-1. Merge the version bump to `master`. Read the Docs rebuilds automatically.
-2. From a clean checkout of the merged commit:
+Manual fallback (e.g. PyPI trusted publishing is down), from a clean checkout of
+the merged commit:
    ```bash
    rm -rf build dist *.egg-info          # stale artifacts are gitignored but still present locally
 
@@ -100,13 +105,13 @@ Releases are currently manual.
    python -m build && python -m twine check dist/*
    python -m twine upload dist/*         # needs PyPI credentials + 2FA; run from an interactive terminal
    ```
-3. Verify with either `python -m pip index versions sapling-py` or
-   `uv run --with sapling-py==<version> --no-project -- python -c
-   "from sapling import SaplingClient"`.
+Verify with either `python -m pip index versions sapling-py` or
+`uv run --with sapling-py==<version> --no-project -- python -c
+"from sapling import SaplingClient"`.
 
 Check `python -m pip index versions sapling-py` before bumping — `version.py` should
 match the latest published release at rest, and be ahead of it only on an unreleased
-branch.
+branch (anything ahead of PyPI on `master` gets published by the workflow).
 
 ## PR review automation (`.github/`)
 
