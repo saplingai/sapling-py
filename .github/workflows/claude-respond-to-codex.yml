@@ -137,8 +137,40 @@ jobs:
             core.setOutput('work_key', key);
             core.setOutput('run', 'true');
 
-      - name: Checkout repository
+      - name: Check Claude workflow trust
+        id: trust
         if: steps.prepare.outputs.run == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          USE_GITHUB_TOKEN: 'true'
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        with:
+          script: |
+            // The Claude App intentionally skips changed workflows with exit code 0.
+            // Check that policy before running it; a skip is not a completed review.
+            // Repositories already using an explicit token retain their existing policy.
+            if (process.env.USE_GITHUB_TOKEN !== 'true') {
+              const path = '.github/workflows/claude-respond-to-codex.yml';
+              const get = ref => github.rest.repos.getContent({...context.repo, path, ref});
+              const [source, trusted] = await Promise.all([
+                get(process.env.WORKFLOW_SHA), get(process.env.DEFAULT_BRANCH)
+              ]);
+              if (!source.data.sha || source.data.sha !== trusted.data.sha) {
+                const message = 'Claude follow-up skipped: this workflow differs from the ' +
+                  'default branch. The Claude App requires identical workflow contents. ' +
+                  'Merge the workflow change, then retry with workflow_dispatch. ' +
+                  'No findings were verified or resolved, and no review was requested.';
+                core.warning(message);
+                await core.summary.addHeading('Claude review follow-up skipped')
+                  .addRaw(message).write();
+                return;
+              }
+            }
+            core.setOutput('run', 'true');
+
+      - name: Checkout repository
+        if: steps.trust.outputs.run == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Keep the read-only agent and repository guidance on the trusted default branch.
@@ -148,7 +180,7 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        if: steps.prepare.outputs.run == 'true'
+        if: steps.trust.outputs.run == 'true'
         uses: ./.github/actions/claude-with-api-fallback
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,7 +234,8 @@ jobs:
                controls re-review requests; never approve or add a thumbs-up for Codex.
 
       - name: Publish verified follow-up and request a fresh review
-        if: steps.prepare.outputs.run == 'true'
+        id: publish
+        if: steps.trust.outputs.run == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           PR_NUMBER: ${{ steps.prepare.outputs.number }}
@@ -211,8 +244,15 @@ jobs:
           CLAUDE_STRUCTURED_OUTPUT: ${{ steps.claude.outputs['structured-output'] }}
         with:
           script: |
-            const result = JSON.parse(process.env.CLAUDE_STRUCTURED_OUTPUT);
-            if (!/^[0-9a-f]{40}$/.test(result.head_sha) ||
+            const raw = process.env.CLAUDE_STRUCTURED_OUTPUT;
+            if (!raw?.trim()) {
+              throw new Error('Claude returned no structured review result. The action may have ' +
+                'skipped execution; inspect the Claude step. No review result will be published.');
+            }
+            let result;
+            try { result = JSON.parse(raw); }
+            catch { throw new Error('Claude returned invalid structured JSON; refusing to publish'); }
+            if (!result || !/^[0-9a-f]{40}$/.test(result.head_sha) ||
                 typeof result.summary !== 'string' || !result.summary.trim()) {
               throw new Error('Claude must provide a verified head and a nonempty summary');
             }
@@ -317,4 +357,11 @@ jobs:
               body += `\n\n@codex review\n\n${requestMarker}`;
             }
             body += `\n\n${marker}`;
+            const {data: current} = await github.rest.pulls.get({
+              ...context.repo, pull_number: number
+            });
+            if (current.state !== 'open' || current.draft || current.head.sha !== result.head_sha ||
+                current.head.repo?.full_name !== `${context.repo.owner}/${context.repo.repo}`) {
+              throw new Error('PR changed before publishing; refusing to report stale verification');
+            }
             await github.rest.issues.createComment({...context.repo, issue_number: number, body});

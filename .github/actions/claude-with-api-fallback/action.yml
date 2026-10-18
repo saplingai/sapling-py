@@ -28,7 +28,8 @@ inputs:
 outputs:
   structured-output:
     description: Structured JSON returned by the successful Claude run.
-    value: ${{ steps.max_plan.outputs.structured_output || steps.api.outputs.structured_output }}
+    # Prefer the successful API fallback; never expose output from a failed OAuth run.
+    value: ${{ steps.api.outcome == 'success' && steps.api.outputs.structured_output || steps.max_plan.outcome == 'success' && steps.max_plan.outputs.structured_output || '' }}
 
 runs:
   using: composite
@@ -48,7 +49,11 @@ runs:
 
     - name: Fall back to Anthropic API billing
       id: api
-      if: ${{ !cancelled() && steps.max_plan.outcome != 'success' && inputs['api-key'] != '' }}
+      if: >-
+        ${{ !cancelled() && inputs['api-key'] != '' &&
+            (steps.max_plan.outcome != 'success' ||
+             (contains(inputs['claude-args'], '--json-schema') &&
+              steps.max_plan.outputs.structured_output == '')) }}
       uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc # v1.0.248
       with:
         anthropic_api_key: ${{ inputs['api-key'] }}
