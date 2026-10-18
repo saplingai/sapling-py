@@ -1,0 +1,98 @@
+name: Test and release
+
+# Continuous delivery to PyPI. Every PR and push to master runs the tests.
+# A push to master that leaves `sapling/version.py` at a version PyPI doesn't
+# have yet builds, publishes via PyPI trusted publishing (no token), and tags
+# the commit `v<version>`. Merging a PR without a version bump only tests.
+#
+# One-time setup on pypi.org (project sapling-py -> Publishing -> add a GitHub
+# trusted publisher): owner saplingai, repository sapling-py, workflow
+# release.yml, environment pypi.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e '.[test]'
+      - run: python -m pytest -q test
+
+  check-version:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      publish: ${{ steps.v.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          version="$(python3 -c "exec(open('sapling/version.py').read()); print(__version__)")"
+          code="$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/sapling-py/${version}/json")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if [ "$code" = 404 ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "sapling-py ${version} is not on PyPI yet; publishing" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$code" = 200 ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "sapling-py ${version} is already on PyPI; nothing to release" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "unexpected PyPI status ${code}" >&2
+            exit 1
+          fi
+
+  publish:
+    needs: check-version
+    if: needs.check-version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/sapling-py/${{ needs.check-version.outputs.version }}/
+    permissions:
+      contents: write   # push the release tag
+      id-token: write   # PyPI trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Tag the release
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          git tag "v${VERSION}" "$GITHUB_SHA"
+          git push origin "v${VERSION}"
+      - name: Smoke-install from PyPI
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            python -m pip install --no-cache-dir "sapling-py==${VERSION}" && break
+            sleep 20
+          done
+          python -c "from sapling import SaplingClient; print('ok')"
