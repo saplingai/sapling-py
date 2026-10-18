@@ -10,12 +10,13 @@ const workflowPath = path.resolve(__dirname, '../workflows/claude-respond-to-cod
 const parsed = spawnSync('python3', ['-c',
   'import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1]))))', workflowPath],
   {encoding: 'utf8'});
+if (parsed.error) throw parsed.error;
 assert.equal(parsed.status, 0, parsed.stderr);
 const workflow = JSON.parse(parsed.stdout);
 const job = workflow.jobs.claude;
 const prepareScript = job.steps.find(step => step.id === 'prepare').with.script;
-const publishScript = job.steps.at(-1).with.script;
-const structured = publishScript.includes('CLAUDE_STRUCTURED_OUTPUT');
+const publishScript = job.steps.find(step => step.id === 'publish').with.script;
+const trust = job.steps.find(step => step.id === 'trust');
 const readOnly = publishScript.includes('result.resolutions');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const head = 'a'.repeat(40);
@@ -57,17 +58,14 @@ async function run(script, f = fixture()) {
   const cursors = [];
   const logs = [];
   const mutations = [];
-  const resultPath = path.join(temp, 'result.json');
   const contextPath = path.join(temp, 'context.json');
   fs.writeFileSync(contextPath, JSON.stringify({head_sha: head,
     threads: f.reviewedThreads || f.threads}));
-  if (f.result === null) fs.rmSync(resultPath, {force: true});
-  else fs.writeFileSync(resultPath, JSON.stringify(f.result));
   const previous = {...process.env};
   Object.assign(process.env, {THREAD_QUERY: job.env.THREAD_QUERY,
-    FOLLOWUP_RESULT: resultPath, PR_NUMBER: '848', FOLLOWUP_KEY: f.workKey,
+    PR_NUMBER: '848', FOLLOWUP_KEY: f.workKey,
     FOLLOWUP_CONTEXT: contextPath,
-    CLAUDE_STRUCTURED_OUTPUT: f.result === null ? '' : JSON.stringify(f.result)});
+    CLAUDE_STRUCTURED_OUTPUT: f.rawResult ?? (f.result === null ? '' : JSON.stringify(f.result))});
   const github = {
     rest: {
       pulls: {listReviewComments: 'listReviewComments', get: async args => {
@@ -84,6 +82,7 @@ async function run(script, f = fixture()) {
       if (method === 'listReviewComments') return [];
       assert.equal(method, 'listComments');
       assert.equal(args.per_page, 100);
+      if (f.moveHeadBeforePublish) f.pr.head.sha = newerHead;
       return f.comments;
     },
     graphql: async (query, args) => {
@@ -211,7 +210,7 @@ test('manual dispatch can retry deferred work with a prior completion marker', a
 
 test('only verified current heads with a result can publish', async () => {
   await assert.rejects(run(publishScript, fixture({result: null})),
-    structured ? /Unexpected end/ : /ENOENT/);
+    /no structured review result/);
   await assert.rejects(run(publishScript, fixture({result: {head_sha: head, summary: ''}})),
     /nonempty summary/);
   const f = fixture();
@@ -291,6 +290,119 @@ if (readOnly) {
     await assert.rejects(run(publishScript, f), /did not confirm/);
   });
 }
+
+
+// Exercise the real trust-gate script and composite expressions, not a fixture file
+// fabricated on Claude's behalf. GitHub's own expression syntax is linted separately.
+async function runTrust({explicitToken = false, changed = false, error = null} = {}) {
+  const previous = {...process.env};
+  const outputs = {};
+  const warnings = [];
+  const summaries = [];
+  const refs = [];
+  Object.assign(process.env, {USE_GITHUB_TOKEN: String(explicitToken),
+    WORKFLOW_SHA: head, DEFAULT_BRANCH: 'master'});
+  const summary = {
+    addHeading: () => summary,
+    addRaw: message => { summaries.push(message); return summary; },
+    write: async () => {}
+  };
+  try {
+    await new AsyncFunction('github', 'context', 'core', trust.with.script)({rest: {repos: {
+      getContent: async ({ref, path: file}) => {
+        assert.equal(file, '.github/workflows/claude-respond-to-codex.yml');
+        refs.push(ref);
+        if (error) throw error;
+        return {data: {sha: changed && ref === head ? 'changed-blob' : 'trusted-blob'}};
+      }
+    }}}, {repo: {owner: 'example', repo: 'service'}}, {
+      setOutput: (key, value) => { outputs[key] = value; },
+      warning: message => warnings.push(message), summary
+    });
+    return {outputs, warnings, summaries, refs};
+  } finally {
+    for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
+    Object.assign(process.env, previous);
+  }
+}
+
+test('changed App workflows explicitly skip without running or publishing', async () => {
+  const result = await runTrust({changed: true});
+  assert.equal(result.outputs.run, undefined);
+  assert.match(result.warnings[0], /No findings were verified or resolved/);
+  assert.match(result.summaries[0], /workflow_dispatch/);
+  assert.deepEqual(result.refs, [head, 'master']);
+  for (const step of job.steps.slice(job.steps.indexOf(trust) + 1)) {
+    assert.equal(step.if, "steps.trust.outputs.run == 'true'", step.name);
+  }
+});
+
+test('matching App workflows run and existing explicit-token policy is preserved', async () => {
+  assert.equal((await runTrust()).outputs.run, 'true');
+  const result = await runTrust({explicitToken: true, changed: true});
+  assert.equal(result.outputs.run, 'true');
+  assert.equal(result.refs.length, 0);
+  assert.equal(trust.env.USE_GITHUB_TOKEN,
+    String(Boolean(job.steps.find(step => step.id === 'claude').with['github-token'])));
+  await assert.rejects(runTrust({error: new Error('GitHub unavailable')}), /GitHub unavailable/);
+});
+
+test('missing, malformed, and null output cannot publish a completed review', async () => {
+  for (const rawResult of ['', ' ', 'not json', 'null', '[]']) {
+    await assert.rejects(run(publishScript, fixture({rawResult})),
+      /no structured review result|invalid structured JSON|nonempty summary/);
+  }
+});
+
+test('a push during publishing prevents a stale summary and review request', async () => {
+  await assert.rejects(run(publishScript, fixture({moveHeadBeforePublish: true})),
+    /PR changed before publishing/);
+});
+
+test('structured output is wired from the successful Claude attempt to the publisher', () => {
+  const actionPath = path.resolve(__dirname, '../actions/claude-with-api-fallback/action.yml');
+  const parsedAction = spawnSync('python3', ['-c',
+    'import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1]))))', actionPath],
+    {encoding: 'utf8'});
+  if (parsedAction.error) throw parsedAction.error;
+  assert.equal(parsedAction.status, 0, parsedAction.stderr);
+  const action = JSON.parse(parsedAction.stdout);
+  const claude = job.steps.find(step => step.id === 'claude');
+  const publish = job.steps.find(step => step.id === 'publish');
+  assert.equal(claude.uses, './.github/actions/claude-with-api-fallback');
+  assert.match(claude.with['claude-args'], /--json-schema/);
+  assert.equal(publish.env.CLAUDE_STRUCTURED_OUTPUT,
+    "${{ steps.claude.outputs['structured-output'] }}");
+  assert.doesNotMatch(fs.readFileSync(workflowPath, 'utf8'), /FOLLOWUP_RESULT/);
+  const fallback = action.runs.steps.find(step => step.id === 'api');
+  const output = action.outputs['structured-output'].value;
+  const evaluate = (expression, steps, inputs, cancelled = false) =>
+    new Function('steps', 'inputs', 'cancelled', 'contains',
+      'return (' + expression.replace(/^\s*\$\{\{|\}\}\s*$/g, '') + ');')(
+      steps, inputs, () => cancelled, (value, part) => value.includes(part));
+  const inputs = {'api-key': 'test-key', 'claude-args': claude.with['claude-args']};
+  const steps = {
+    max_plan: {outcome: 'success', outputs: {structured_output: ''}},
+    api: {outcome: 'skipped', outputs: {structured_output: ''}}
+  };
+  // Reproduce the upstream action's successful no-op from the failed run.
+  assert.equal(evaluate(fallback.if, steps, inputs), true);
+  assert.equal(evaluate(output, steps, inputs), '');
+  assert.equal(evaluate(fallback.if, steps, {...inputs, 'api-key': ''}), false);
+  assert.equal(evaluate(fallback.if, steps, inputs, true), false);
+  steps.max_plan.outcome = 'failure';
+  steps.max_plan.outputs.structured_output = '{"summary":"incomplete OAuth output"}';
+  assert.equal(evaluate(fallback.if, steps, inputs), true);
+  assert.equal(evaluate(output, steps, inputs), '');
+  steps.api = {outcome: 'success', outputs: {structured_output: '{"summary":"API result"}'}};
+  assert.equal(evaluate(output, steps, inputs), steps.api.outputs.structured_output);
+  steps.max_plan = {outcome: 'success', outputs: {structured_output: '{"summary":"OAuth result"}'}};
+  assert.equal(evaluate(fallback.if, steps, inputs), false);
+  steps.api = {outcome: 'skipped', outputs: {structured_output: ''}};
+  assert.equal(evaluate(output, steps, inputs), steps.max_plan.outputs.structured_output);
+  steps.max_plan.outputs.structured_output = '';
+  assert.equal(evaluate(fallback.if, steps, {...inputs, 'claude-args': '--model test'}), false);
+});
 
 (async () => {
   try {
