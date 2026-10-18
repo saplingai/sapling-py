@@ -115,7 +115,11 @@ branch.
 - `claude-respond-to-codex.yml`: when the Codex or Gemini bot submits a review on a PR
   opened from a branch in this repo (not a fork), Claude (via
   `.github/actions/claude-with-api-fallback`) evaluates each finding and posts a
-  verdict comment. It does not modify code.
+  verdict comment. It also handles completed Codex summary updates and manual retries.
+  It does not modify code: verified existing fixes are proposed in structured output,
+  and the workflow checks the head and bot thread before replying and resolving it.
+  Deferred, disputed, or unverified findings stay open; a clean set of threads can
+  request one fresh Codex review per head.
 
 Both workflows check out the **trusted default branch** and treat PR contents as
 untrusted input; they read `AGENTS.md` → `CLAUDE.md` from `master`. When editing them,
