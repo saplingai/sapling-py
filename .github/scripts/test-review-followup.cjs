@@ -15,7 +15,9 @@ assert.equal(parsed.status, 0, parsed.stderr);
 const workflow = JSON.parse(parsed.stdout);
 const job = workflow.jobs.claude;
 const prepareScript = job.steps.find(step => step.id === 'prepare').with.script;
-const publishScript = job.steps.find(step => step.id === 'publish').with.script;
+const publishJob = workflow.jobs.publish;
+const publishStep = publishJob.steps.find(step => step.id === 'publish');
+const publishScript = publishStep.with.script;
 const trust = job.steps.find(step => step.id === 'trust');
 const readOnly = publishScript.includes('result.resolutions');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -62,9 +64,10 @@ async function run(script, f = fixture()) {
   fs.writeFileSync(contextPath, JSON.stringify({head_sha: head,
     threads: f.reviewedThreads || f.threads}));
   const previous = {...process.env};
-  Object.assign(process.env, {THREAD_QUERY: job.env.THREAD_QUERY,
+  Object.assign(process.env, {THREAD_QUERY: workflow.env.THREAD_QUERY,
     PR_NUMBER: '848', FOLLOWUP_KEY: f.workKey,
     FOLLOWUP_CONTEXT: contextPath,
+    FOLLOWUP_SNAPSHOT: JSON.stringify({head_sha: head, threads: f.reviewedThreads || f.threads}),
     CLAUDE_STRUCTURED_OUTPUT: f.rawResult ?? (f.result === null ? '' : JSON.stringify(f.result))});
   const github = {
     rest: {
@@ -97,7 +100,7 @@ async function run(script, f = fixture()) {
         finding.isResolved = !f.failResolution;
         return {resolveReviewThread: {thread: {id: finding.id, isResolved: finding.isResolved}}};
       }
-      assert.equal(query, job.env.THREAD_QUERY);
+      assert.equal(query, workflow.env.THREAD_QUERY);
       assert.equal(args.owner, 'example');
       assert.equal(args.repo, 'service');
       cursors.push(args.cursor);
@@ -368,11 +371,12 @@ test('structured output is wired from the successful Claude attempt to the publi
   assert.equal(parsedAction.status, 0, parsedAction.stderr);
   const action = JSON.parse(parsedAction.stdout);
   const claude = job.steps.find(step => step.id === 'claude');
-  const publish = job.steps.find(step => step.id === 'publish');
+  const publish = publishStep;
   assert.equal(claude.uses, './.github/actions/claude-with-api-fallback');
   assert.match(claude.with['claude-args'], /--json-schema/);
   assert.equal(publish.env.CLAUDE_STRUCTURED_OUTPUT,
-    "${{ steps.claude.outputs['structured-output'] }}");
+    "${{ needs.claude.outputs.structured_output }}");
+  assert.equal(job.outputs.structured_output, "${{ steps.claude.outputs['structured-output'] }}");
   assert.doesNotMatch(fs.readFileSync(workflowPath, 'utf8'), /FOLLOWUP_RESULT/);
   const fallback = action.runs.steps.find(step => step.id === 'api');
   const output = action.outputs['structured-output'].value;
@@ -402,6 +406,35 @@ test('structured output is wired from the successful Claude attempt to the publi
   assert.equal(evaluate(output, steps, inputs), steps.max_plan.outputs.structured_output);
   steps.max_plan.outputs.structured_output = '';
   assert.equal(evaluate(fallback.if, steps, {...inputs, 'claude-args': '--model test'}), false);
+});
+
+test('resolution permission is isolated from Claude and repository code', () => {
+  assert.equal(job.permissions.contents, 'read');
+  assert.equal(publishJob.permissions.contents, 'write');
+  assert.equal(publishJob.permissions['pull-requests'], 'write');
+  assert.equal(publishJob.needs, 'claude');
+  assert.equal(publishJob.if,
+    "needs.claude.result == 'success' && needs.claude.outputs.run == 'true'");
+  assert.equal(publishJob.steps.length, 1);
+  assert.equal(publishStep.uses,
+    'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3');
+  assert.equal(publishStep.run, undefined);
+  assert.doesNotMatch(publishScript, /exec\(|spawn\(|eval\(|new Function|readFileSync/);
+  assert.equal(job.steps.find(step => step.name === 'Checkout repository')
+    .with['persist-credentials'], false);
+  const agent = job.steps.find(step => step.id === 'claude');
+  assert.doesNotMatch(agent.with['claude-args'], /Read,Edit|Write|,Bash"/);
+});
+
+test('the publisher receives the prepared snapshot across the job boundary', async () => {
+  const f = fixture();
+  const {outputs} = await run(prepareScript, f);
+  assert.deepEqual(JSON.parse(outputs.snapshot), {head_sha: head, threads: f.threads});
+  assert.equal(job.outputs.snapshot, "${{ steps.prepare.outputs.snapshot }}");
+  assert.equal(publishStep.env.FOLLOWUP_SNAPSHOT, "${{ needs.claude.outputs.snapshot }}");
+  assert.equal(publishStep.env.PR_NUMBER, "${{ needs.claude.outputs.number }}");
+  assert.equal(publishStep.env.FOLLOWUP_KEY, "${{ needs.claude.outputs.work_key }}");
+  assert.equal(publishStep.env.FOLLOWUP_CONTEXT, undefined);
 });
 
 (async () => {

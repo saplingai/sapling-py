@@ -18,6 +18,27 @@ concurrency:
   group: review-followup-${{ github.repository }}-${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request }}
   cancel-in-progress: false
 
+env:
+  # Both gates paginate threads; comments(first: 1) identifies their author.
+  # The agent separately reads the full discussion before resolving anything.
+  THREAD_QUERY: |
+    query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+      repository(owner: $owner, name: $repo) {
+        pullRequest(number: $number) {
+          reviewThreads(first: 100, after: $cursor) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id isResolved
+              comments(first: 1) {
+                totalCount
+                nodes { id updatedAt author { login } }
+              }
+            }
+          }
+        }
+      }
+    }
+
 jobs:
   claude:
     # Codex can finish by editing its summary, without submitting another review.
@@ -35,26 +56,12 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
-    env:
-      # Both gates paginate threads; comments(first: 1) identifies their author.
-      # The agent separately reads the full discussion before resolving anything.
-      THREAD_QUERY: |
-        query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
-          repository(owner: $owner, name: $repo) {
-            pullRequest(number: $number) {
-              reviewThreads(first: 100, after: $cursor) {
-                pageInfo { hasNextPage endCursor }
-                nodes {
-                  id isResolved
-                  comments(first: 1) {
-                    totalCount
-                    nodes { id updatedAt author { login } }
-                  }
-                }
-              }
-            }
-          }
-        }
+    outputs:
+      run: ${{ steps.trust.outputs.run }}
+      number: ${{ steps.prepare.outputs.number }}
+      work_key: ${{ steps.prepare.outputs.work_key }}
+      snapshot: ${{ steps.prepare.outputs.snapshot }}
+      structured_output: ${{ steps.claude.outputs['structured-output'] }}
     steps:
       - name: Select current review work
         id: prepare
@@ -132,6 +139,7 @@ jobs:
             });
             require('fs').writeFileSync(process.env.FOLLOWUP_CONTEXT,
               JSON.stringify({head_sha: pr.head.sha, threads, reviewComments}));
+            core.setOutput('snapshot', JSON.stringify({head_sha: pr.head.sha, threads}));
             core.setOutput('number', number);
             core.setOutput('head_sha', pr.head.sha);
             core.setOutput('work_key', key);
@@ -233,15 +241,27 @@ jobs:
                replying and resolving proposed threads, then posts the summary. It alone
                controls re-review requests; never approve or add a thumbs-up for Codex.
 
+  publish:
+    # GitHub requires repository-write access to resolveReviewThread:
+    # https://github.com/github/gh-aw/issues/35726
+    # Keep this token on a separate runner with no checkout, model, or PR code execution.
+    needs: claude
+    if: needs.claude.result == 'success' && needs.claude.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
       - name: Publish verified follow-up and request a fresh review
         id: publish
-        if: steps.trust.outputs.run == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          PR_NUMBER: ${{ steps.prepare.outputs.number }}
-          FOLLOWUP_KEY: ${{ steps.prepare.outputs.work_key }}
-          FOLLOWUP_CONTEXT: ${{ runner.temp }}/review-followup-context.json
-          CLAUDE_STRUCTURED_OUTPUT: ${{ steps.claude.outputs['structured-output'] }}
+          PR_NUMBER: ${{ needs.claude.outputs.number }}
+          FOLLOWUP_KEY: ${{ needs.claude.outputs.work_key }}
+          FOLLOWUP_SNAPSHOT: ${{ needs.claude.outputs.snapshot }}
+          CLAUDE_STRUCTURED_OUTPUT: ${{ needs.claude.outputs.structured_output }}
         with:
           script: |
             const raw = process.env.CLAUDE_STRUCTURED_OUTPUT;
@@ -274,8 +294,7 @@ jobs:
               threads.push(...page.nodes);
               cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
             } while (cursor);
-            const snapshot = JSON.parse(require('fs').readFileSync(
-              process.env.FOLLOWUP_CONTEXT, 'utf8'));
+            const snapshot = JSON.parse(process.env.FOLLOWUP_SNAPSHOT);
             if (snapshot.head_sha !== result.head_sha || !Array.isArray(result.resolutions)) {
               throw new Error('Expected a read-only assessment of the original PR head');
             }

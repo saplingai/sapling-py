@@ -117,11 +117,14 @@ branch.
   `.github/actions/claude-with-api-fallback`) evaluates each finding and posts a
   verdict comment. It also handles completed Codex summary updates and manual retries.
   It does not modify code: verified existing fixes are proposed in structured output,
-  and the workflow checks the head and bot thread before replying and resolving it.
+  and a separate publishing job checks the head and bot thread before replying and resolving it.
+  Only that job has `contents: write` (required by GitHub for `resolveReviewThread`);
+  it must never check out code, run an agent, or execute PR-provided commands. The
+  Claude job retains `contents: read` and its read-only tools.
   Deferred, disputed, or unverified findings stay open; a clean set of threads can
   request one fresh Codex review per head.
 
-Both workflows check out the **trusted default branch** and treat PR contents as
+Both workflows' agent jobs check out the **trusted default branch** and treat PR contents as
 untrusted input; they read `AGENTS.md` → `CLAUDE.md` from `master`. When editing them,
 keep the bot-login / not-from-a-fork / login-allowlist gates, `persist-credentials:
 false`, and the read-only tool allowlist — this is a public repo and those runs spend
