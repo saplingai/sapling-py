@@ -38,7 +38,7 @@ runs:
       id: max_plan
       if: inputs['oauth-token'] != ''
       continue-on-error: true
-      uses: anthropics/claude-code-action@db77d4d3c98f3f6380e7cd45ffba2342a3dbde3c # v1.0.254
+      uses: anthropics/claude-code-action@8041f1d17e0e7d2f2cfe35002962e9f26237c0bb # v1.0.263
       with:
         claude_code_oauth_token: ${{ inputs['oauth-token'] }}
         github_token: ${{ inputs['github-token'] }}
@@ -54,7 +54,7 @@ runs:
             (steps.max_plan.outcome != 'success' ||
              (contains(inputs['claude-args'], '--json-schema') &&
               steps.max_plan.outputs.structured_output == '')) }}
-      uses: anthropics/claude-code-action@db77d4d3c98f3f6380e7cd45ffba2342a3dbde3c # v1.0.254
+      uses: anthropics/claude-code-action@8041f1d17e0e7d2f2cfe35002962e9f26237c0bb # v1.0.263
       with:
         anthropic_api_key: ${{ inputs['api-key'] }}
         github_token: ${{ inputs['github-token'] }}
