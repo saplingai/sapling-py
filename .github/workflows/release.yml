@@ -8,6 +8,10 @@ name: Test and release
 # One-time setup on pypi.org (project sapling-py -> Publishing -> add a GitHub
 # trusted publisher): owner saplingai, repository sapling-py, workflow
 # release.yml, environment pypi.
+#
+# Optional: a Slack incoming webhook in the repo secret SLACK_DEPLOY_WEBHOOK
+# gets a one-line notice per release attempt (success or failure). Without the
+# secret the notify step is a no-op.
 
 on:
   pull_request:
@@ -96,3 +100,15 @@ jobs:
             sleep 20
           done
           python -c "from sapling import SaplingClient; print('ok')"
+
+      - name: Notify Slack
+        if: always()
+        env:
+          SLACK_DEPLOY_WEBHOOK: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          STATUS: ${{ job.status }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$SLACK_DEPLOY_WEBHOOK" ] || exit 0
+          msg="sapling-py release ${VERSION} to PyPI: ${STATUS} - ${RUN_URL}"
+          jq -n --arg t "$msg" '{text: $t}' | curl -sf -X POST -H 'Content-Type: application/json' -d @- "$SLACK_DEPLOY_WEBHOOK" > /dev/null || true
