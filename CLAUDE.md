@@ -66,7 +66,8 @@ char lines, snake_case, stdlib → third-party → local import groups.
   Malformed RST breaks the `-W` docs build. Language/option lists in docstrings are
   user-facing documentation — keep them accurate.
 - `hostname` / `pathname` overrides exist for self-hosted deployments; keep the
-  `self.url_endpoint = hostname + pathname` composition intact.
+  `self.url_endpoint = hostname + pathname` composition intact. Both are normalized
+  first (slashes optional), so `url_endpoint` always ends in `/`.
 
 ## Adding or changing an endpoint method
 

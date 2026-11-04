@@ -28,6 +28,7 @@ class SaplingClient:
     :param hostname: Hostname override for SDK and self-hosted deployments.
     :type hostname: str
     :param pathname: Pathname override for SDK and self-hosted deployments as well as version requirements.
+        Leading and trailing slashes are optional.
     :type pathname: str
     '''
 
@@ -40,8 +41,9 @@ class SaplingClient:
     ):
         self.api_key = api_key
         self.timeout = timeout
-        self.hostname = hostname or 'https://api.sapling.ai'
-        self.pathname = pathname or '/api/v1/'
+        self.hostname = (hostname or 'https://api.sapling.ai').rstrip('/')
+        path = (pathname or '/api/v1/').strip('/')
+        self.pathname = f'/{path}/' if path else '/'
         self.url_endpoint = self.hostname + self.pathname
         self.default_session_id = str(uuid.uuid4())
         self.session = requests.Session()

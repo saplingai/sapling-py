@@ -200,6 +200,26 @@ def test_hostname_and_pathname_override():
     client.edits('hi')
     assert responses.calls[-1].request.url == 'http://localhost:5000/api/v1/edits'
 
+
+@pytest.mark.parametrize('hostname,pathname,expected', [
+    (None, None, 'https://api.sapling.ai/api/v1/edits'),
+    (None, '/api/v2', 'https://api.sapling.ai/api/v2/edits'),
+    (None, 'api/v2/', 'https://api.sapling.ai/api/v2/edits'),
+    (None, 'api/v2', 'https://api.sapling.ai/api/v2/edits'),
+    ('https://host/', None, 'https://host/api/v1/edits'),
+    ('https://host/', '/x/', 'https://host/x/edits'),
+    ('https://host/prefix/', '/api/v1', 'https://host/prefix/api/v1/edits'),
+    ('https://host', '/', 'https://host/edits'),
+    ('https://host/', '/', 'https://host/edits'),
+])
+@responses.activate
+def test_hostname_and_pathname_slashes_are_normalized(hostname, pathname, expected):
+    client = SaplingClient(api_key=API_KEY, hostname=hostname, pathname=pathname)
+    responses.add(responses.POST, expected, json={'edits': []}, status=200)
+    client.edits('hi')
+    assert responses.calls[-1].request.url == expected
+
+
 @responses.activate
 def test_quality_options(client):
     payload = {
