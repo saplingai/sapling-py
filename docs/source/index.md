@@ -6,7 +6,7 @@ Sapling for Python
 Refer to the the {doc}`usage` section for further information, including
 {ref}`installation` instructions.
 
-Here's a [grammar check demo](https://sapling.ai/grammar-check).
+Try out a [grammar check demo](https://sapling.ai/grammar-check) or an [AI detection demo](https://sapling.ai/ai-content-detector). The [SDK demo](https://sapling.ai/sdk-textarea-demo) shows both running live in a textarea through Sapling's browser SDK.
 
 
 ```{note}

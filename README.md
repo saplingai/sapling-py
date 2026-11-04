@@ -2,8 +2,8 @@
 
 Python SDK wrapper for the [Sapling.ai API](https://sapling.ai/docs).
 
-Try our [grammar check demo](https://sapling.ai/grammar-check).
-Compare against leading grammar checking tools and APIs like Grammarly (Grammerly), LanguageTool, ProWritingAid and Ginger.
+Try out a [grammar check demo](https://sapling.ai/grammar-check) or an [AI detection demo](https://sapling.ai/ai-content-detector). The [SDK demo](https://sapling.ai/sdk-textarea-demo) shows both running live in a textarea through Sapling's browser SDK.
+Compare against grammar checking tools and APIs like Grammarly (Grammerly), LanguageTool, ProWritingAid and Ginger.
 
 ## Overview
 
