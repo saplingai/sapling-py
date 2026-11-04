@@ -19,7 +19,7 @@ def _legacy_setup_kwargs():
     return {
         'name': 'sapling-py',
         'version': version['__version__'],
-        'description': 'Sapling Python Client',
+        'description': 'Python client for the Sapling.ai API (grammar checking, AI content detection, rephrasing and more).',
         'long_description': (this_directory / 'README.md').read_text(),
         'long_description_content_type': 'text/markdown',
         'url': 'https://sapling.ai',
