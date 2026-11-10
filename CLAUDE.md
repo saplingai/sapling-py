@@ -116,8 +116,10 @@ branch (anything ahead of PyPI on `master` gets published by the workflow).
 
 ## PR review automation (`.github/`)
 
-- `codex-api-review.yml`: an allowlisted maintainer commenting `/codex-api-review` on
-  a PR triggers a Codex review, posted as a PR review.
+- `codex-api-review.yml`: anyone with write access to this repo commenting
+  `/codex-api-review` on a PR triggers a Codex review, posted as a PR review. An
+  `authorize` job checks the commenter's permission through the API; the paid
+  `review` job only runs if it passes.
 - `claude-respond-to-codex.yml`: when the Codex or Gemini bot submits a review on a PR
   opened from a branch in this repo (not a fork), Claude (via
   `.github/actions/claude-with-api-fallback`) evaluates each finding and posts a
@@ -132,10 +134,11 @@ branch (anything ahead of PyPI on `master` gets published by the workflow).
 
 Both workflows' agent jobs check out the **trusted default branch** and treat PR contents as
 untrusted input; they read `AGENTS.md` → `CLAUDE.md` from `master`. When editing them,
-keep the bot-login / not-from-a-fork / login-allowlist gates, `persist-credentials:
+keep the bot-login / not-from-a-fork / write-permission gates, `persist-credentials:
 false`, and the read-only tool allowlist — this is a public repo and those runs spend
 credits. Don't gate on `author_association`: org members with private membership are
 reported as `CONTRIBUTOR`/`NONE` in webhook payloads, so such a gate never passes.
+Check the real permission with `repos.getCollaboratorPermissionLevel` instead.
 
 ## Public-repo hygiene
 
