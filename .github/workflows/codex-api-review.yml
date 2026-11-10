@@ -4,19 +4,47 @@ on:
   issue_comment:
     types: [created]
 
-concurrency:
-  group: codex-api-review-${{ github.repository }}-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
 jobs:
-  review:
-    # Public repo: only an explicit allowlist of maintainers may trigger a paid
-    # Codex run. author_association is not usable here (private org membership
-    # reports as CONTRIBUTOR/NONE in webhook payloads).
+  authorize:
+    # Public repo: only people with write access may trigger a paid Codex run.
+    # author_association is not usable for this (private org membership reports
+    # as CONTRIBUTOR/NONE in webhook payloads), so ask the API for the
+    # commenter's actual permission on this repository instead.
     if: |
       github.event.issue.pull_request != null &&
       github.event.comment.body == '/codex-api-review' &&
-      contains(fromJSON('["zxie","saplingdev"]'), github.event.comment.user.login)
+      github.event.comment.user.type == 'User'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check commenter has write access
+        id: check
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            // Fails closed: an API error fails this job, which skips the review.
+            const username = context.payload.comment.user.login;
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username,
+            });
+            const allowed = ['admin', 'write'].includes(data.permission);
+            core.info(`${username}: permission=${data.permission} allowed=${allowed}`);
+            core.setOutput('allowed', String(allowed));
+
+  review:
+    needs: authorize
+    if: needs.authorize.outputs.allowed == 'true'
+    # Job-level so that unauthorized comments never displace a queued review.
+    concurrency:
+      group: codex-api-review-${{ github.repository }}-${{ github.event.issue.number }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
