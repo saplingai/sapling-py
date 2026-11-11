@@ -11,10 +11,6 @@ on:
   issue_comment:
     types: [created]
 
-concurrency:
-  group: resolve-pr-conflicts-${{ github.repository }}-${{ github.event.issue.number }}
-  cancel-in-progress: true
-
 permissions:
   contents: write
   pull-requests: write
@@ -22,38 +18,66 @@ permissions:
 
 jobs:
   # Cheap gate so the expensive job never starts for a comment that merely
-  # contains the word "resolve". GitHub expressions have no trim/lowercase.
+  # contains the word "resolve", or for a commenter without write access.
+  # GitHub expressions have no trim/lowercase.
+  #
+  # author_association is not usable here: private org membership reports as
+  # CONTRIBUTOR/NONE in webhook payloads, and a MEMBER or COLLABORATOR can hold
+  # only read/triage anyway. Ask the API for the commenter's actual permission.
   gate:
     if: >-
       github.event.issue.pull_request != null &&
-      github.event.comment.user.type != 'Bot' &&
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+      github.event.comment.user.type == 'User' &&
       (contains(github.event.comment.body, 'resolve') ||
        contains(github.event.comment.body, 'Resolve') ||
        contains(github.event.comment.body, 'RESOLVE'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # This job only reads the commenter's permission; it never checks out code.
+    permissions:
+      contents: read
     outputs:
       run: ${{ steps.check.outputs.run }}
     steps:
       - id: check
         env:
           BODY: ${{ github.event.comment.body }}
+          ACTOR: ${{ github.event.comment.user.login }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
           normalized="$(printf '%s' "$BODY" | tr -d '\r' | tr '[:upper:]' '[:lower:]' \
             | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-          if [[ "$normalized" =~ ^/?resolve([[:space:]]+(the[[:space:]]+)?(merge[[:space:]]+)?conflicts?)?[.!]?$ ]]; then
-            echo "run=true" >>"$GITHUB_OUTPUT"
-          else
+          if [[ ! "$normalized" =~ ^/?resolve([[:space:]]+(the[[:space:]]+)?(merge[[:space:]]+)?conflicts?)?[.!]?$ ]]; then
             echo "matched the word but not the command ('$normalized'); skipping"
             echo "run=false" >>"$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # Fails closed: an API error counts as no access. Skip silently rather
+          # than reply, so strangers cannot make the bot comment on a public repo.
+          level=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq .permission 2>/dev/null || echo none)
+          case "$level" in
+            write | admin)
+              echo "$ACTOR has $level access"
+              echo "run=true" >>"$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "$ACTOR has '$level' permission, not write/admin; skipping"
+              echo "run=false" >>"$GITHUB_OUTPUT"
+              ;;
+          esac
 
   resolve:
     needs: gate
     if: needs.gate.outputs.run == 'true'
+    # Job-level so that only an authorized `resolve` can cancel a running one;
+    # at workflow level any comment on the pull request would.
+    concurrency:
+      group: resolve-pr-conflicts-${{ github.repository }}-${{ github.event.issue.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -71,27 +95,6 @@ jobs:
           gh api --silent -X POST \
             "repos/$REPO/issues/comments/${{ github.event.comment.id }}/reactions" \
             -f content=eyes || true
-
-      # Association is not permission: a MEMBER or COLLABORATOR can hold only
-      # read/triage. Ask for the commenter's actual permission before any branch
-      # code is checked out - the no-conflict path never reaches the agent
-      # action, which does its own write-access check.
-      - name: Require write access
-        shell: bash
-        env:
-          ACTOR: ${{ github.event.comment.user.login }}
-        run: |
-          set -euo pipefail
-          level=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq .permission 2>/dev/null || echo none)
-          case "$level" in
-            write | admin) echo "$ACTOR has $level access" ;;
-            *)
-              gh pr comment "$PR" --repo "$REPO" \
-                --body "\`resolve\` needs write access to this repository; \`$ACTOR\` has \`$level\`."
-              echo "::error::$ACTOR has '$level' permission, not write/admin"
-              exit 1
-              ;;
-          esac
 
       - name: Load pull request
         id: pr
