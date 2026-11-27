@@ -68,6 +68,28 @@ def test_error_response_raises_saplingerror_with_body(client):
     # Regression test: the response body must be interpolated into the message.
     assert 'Invalid text.' in str(err)
     assert 'Invalid text.' in err.body
+    assert err.code is None
+
+
+@responses.activate
+def test_coded_api_error_preserves_status_and_raw_body(client):
+    body = {'msg': 'Quota used.', 'code': 'monthly_quota_exceeded', 'retry_after': 3600}
+    responses.add(responses.POST, BASE + 'edits', json=body, status=429)
+
+    with pytest.raises(SaplingError) as exc_info:
+        client.edits('hi')
+
+    err = exc_info.value
+    assert err.status_code == 429
+    assert err.code == 'monthly_quota_exceeded'
+    assert isinstance(err.body, str)
+    assert json.loads(err.body) == body
+    assert str(err) == f'HTTP 429: {err.body}'
+
+
+@pytest.mark.parametrize('body', [None, 'not JSON', '[1]', '{"code": 42}'])
+def test_saplingerror_code_is_none_without_a_string_code(body):
+    assert SaplingError(400, body).code is None
 
 
 @responses.activate

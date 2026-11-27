@@ -1,6 +1,8 @@
-import requests
+import json
 import uuid
 from collections.abc import Iterable
+
+import requests
 
 
 class SaplingError(Exception):
@@ -15,6 +17,18 @@ class SaplingError(Exception):
         self.status_code = status_code
         self.body = body
         super().__init__(f'HTTP {status_code}: {body}')
+
+    @property
+    def code(self):
+        '''The API's error code, or ``None`` if the response had no string code.'''
+        body = self.body
+        if isinstance(body, str):
+            try:
+                body = json.loads(body)
+            except (ValueError, RecursionError):
+                return None
+        code = body.get('code') if isinstance(body, dict) else None
+        return code if isinstance(code, str) else None
 
 
 class SaplingClient:

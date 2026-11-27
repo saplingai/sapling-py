@@ -87,6 +87,12 @@ scores = client.quality(['First draft.', 'Second draft.'], sentence_scores=True)
 langs = client.langdetect(['Bonjour le monde', 'Hello world'])
 ```
 
+## Handling API errors
+
+`SaplingError.code` exposes the API's machine-readable error code when present.
+It is `None` for responses without a string code. `SaplingError.status_code` and
+`SaplingError.body` still contain the HTTP status and raw response body.
+
 ## License
 
 Copyright 2024--present Sapling Intelligence, Inc.
